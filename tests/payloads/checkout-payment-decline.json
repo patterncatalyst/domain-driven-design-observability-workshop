@@ -1,0 +1,9 @@
+{
+  "cartId": "cart_demo_decline",
+  "customerId": "cust_carol_silver",
+  "lineItems": [
+    { "sku": "SKU-100", "quantity": 1, "unitPrice": 29.99 }
+  ],
+  "paymentMethod": "credit_card_will_decline",
+  "shippingClass": "standard"
+}

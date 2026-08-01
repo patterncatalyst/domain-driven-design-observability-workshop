@@ -1,0 +1,10 @@
+{
+  "cartId": "cart_demo_001",
+  "customerId": "cust_alice_silver",
+  "lineItems": [
+    { "sku": "SKU-100", "quantity": 2, "unitPrice": 29.99 },
+    { "sku": "SKU-242", "quantity": 1, "unitPrice": 49.50 }
+  ],
+  "paymentMethod": "credit_card",
+  "shippingClass": "standard"
+}

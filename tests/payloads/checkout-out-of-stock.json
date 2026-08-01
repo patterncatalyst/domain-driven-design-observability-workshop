@@ -1,0 +1,9 @@
+{
+  "cartId": "cart_demo_oos",
+  "customerId": "cust_bob_bronze",
+  "lineItems": [
+    { "sku": "SKU-OUT-OF-STOCK", "quantity": 1, "unitPrice": 19.99 }
+  ],
+  "paymentMethod": "credit_card",
+  "shippingClass": "standard"
+}

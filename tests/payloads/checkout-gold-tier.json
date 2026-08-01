@@ -1,0 +1,9 @@
+{
+  "cartId": "cart_demo_gold",
+  "customerId": "cust_dave_gold",
+  "lineItems": [
+    { "sku": "SKU-PREMIUM-001", "quantity": 1, "unitPrice": 499.99 }
+  ],
+  "paymentMethod": "credit_card",
+  "shippingClass": "express"
+}

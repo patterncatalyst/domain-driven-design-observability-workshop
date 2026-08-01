@@ -1,0 +1,53 @@
+title: "Building Observable Domains"
+description: "A hands-on DDD + OpenTelemetry workshop in Quarkus, Python, and C#"
+url: "https://patterncatalyst.github.io"
+baseurl: "/domain-driven-design-observability-workshop"
+github_username: patterncatalyst
+github_repo: domain-driven-design-observability-workshop
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+permalink: pretty
+
+collections:
+  docs:
+    output: true
+    permalink: /docs/:name/
+  parts:
+    output: true
+    permalink: /parts/:name/
+
+defaults:
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "tutorial"
+  - scope:
+      path: ""
+      type: "parts"
+    values:
+      layout: "part_index"
+
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - vendor/
+  - node_modules/
+  - exercises/
+  - infrastructure/
+  - tests/
+  - scripts/
+  - presentation/
+  - _plans/
+  - README.md
+  - LICENSE
+  - CONTRIBUTING.md

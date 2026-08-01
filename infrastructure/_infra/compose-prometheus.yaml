@@ -1,0 +1,41 @@
+# =============================================================================
+# Prometheus - metric storage with exemplar support
+# =============================================================================
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: workshop-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=6h"
+      - "--enable-feature=exemplar-storage"
+      - "--enable-feature=native-histograms"
+      - "--web.enable-remote-write-receiver"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro,Z
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:9090/-/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - workshop
+
+volumes:
+  prometheus-data:
+
+networks:
+  workshop:
+    name: workshop
+    driver: bridge

@@ -1,0 +1,126 @@
+# =============================================================================
+# OpenTelemetry Collector configuration
+# =============================================================================
+# Pipelines:
+#   - traces:  OTLP -> batch -> Tempo (OTLP/gRPC)
+#   - metrics: OTLP -> batch -> Prometheus (via Prometheus exporter on :8889)
+#   - logs:    OTLP -> batch -> Loki (OTLP/HTTP)
+#
+# The tail-sampling processor is defined but NOT wired into the traces
+# pipeline by default. Module 6 swaps the active pipeline to the sampled
+# variant so participants can see the cost difference live.
+# =============================================================================
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  # The Collector scrapes its own metrics so we can show "cost of observability"
+  # in the Module 6 dashboard.
+  prometheus/self:
+    config:
+      scrape_configs:
+        - job_name: otel-collector
+          scrape_interval: 15s
+          static_configs:
+            - targets: [localhost:8888]
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  memory_limiter:
+    check_interval: 2s
+    limit_mib: 512
+    spike_limit_mib: 128
+
+  # Add a `service.namespace` resource attribute to every signal so dashboards
+  # can filter "everything from this workshop" cleanly.
+  resource:
+    attributes:
+      - key: service.namespace
+        value: workshop
+        action: upsert
+
+  # ---------------------------------------------------------------------------
+  # Tail-sampling - inactive in the default pipeline. Module 6 activates this.
+  # ---------------------------------------------------------------------------
+  tail_sampling:
+    decision_wait: 10s
+    num_traces: 50000
+    expected_new_traces_per_sec: 100
+    policies:
+      # Always keep traces with errors
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      # Always keep slow traces
+      - name: slow
+        type: latency
+        latency:
+          threshold_ms: 1000
+      # Sample 10% of the rest
+      - name: random_sample
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+exporters:
+  # Traces -> Tempo
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Metrics -> Prometheus exporter (Prometheus scrapes us on :8889)
+  prometheus:
+    endpoint: 0.0.0.0:8889
+    namespace: workshop
+    send_timestamps: true
+    metric_expiration: 5m
+    enable_open_metrics: true
+    resource_to_telemetry_conversion:
+      enabled: true
+
+  # Logs -> Loki via OTLP/HTTP
+  otlphttp/loki:
+    endpoint: http://loki:3100/otlp
+    tls:
+      insecure: true
+
+  # Debug exporter for local troubleshooting (commented out by default)
+  # debug:
+  #   verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      # In Module 6, swap the line above for:
+      # processors: [memory_limiter, resource, tail_sampling, batch]
+      exporters: [otlp/tempo]
+
+    metrics:
+      receivers: [otlp, prometheus/self]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [otlphttp/loki]
+
+  telemetry:
+    metrics:
+      level: detailed
+      address: 0.0.0.0:8888
+    logs:
+      level: info

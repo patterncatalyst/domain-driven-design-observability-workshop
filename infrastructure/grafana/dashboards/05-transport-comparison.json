@@ -1,0 +1,109 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "title": "Workshop / Transport Comparison",
+  "uid": "workshop-transport-comparison",
+  "tags": ["workshop", "module-5", "boundaries"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {"from": "now-15m", "to": "now"},
+  "templating": {"list": []},
+  "panels": [
+    {
+      "id": 1,
+      "title": "Order.Acl.InventoryReserve latency by transport",
+      "description": "p50 and p95 latency of the ACL boundary span, broken down by transport. Same span name, same code path, different wire format. The legend shows REST and gRPC side by side; gRPC is typically lower at p95 because of less head-of-line blocking on persistent HTTP/2 connections.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 0},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.50, sum by (le, span_name) (rate(traces_spanmetrics_latency_bucket{service=\"order-service\", span_name=\"Order.Acl.InventoryReserve\"}[1m])))",
+          "legendFormat": "p50 {{span_name}}",
+          "refId": "A"
+        },
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "histogram_quantile(0.95, sum by (le, span_name) (rate(traces_spanmetrics_latency_bucket{service=\"order-service\", span_name=\"Order.Acl.InventoryReserve\"}[1m])))",
+          "legendFormat": "p95 {{span_name}}",
+          "refId": "B"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 10}
+        }
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list", "placement": "bottom"},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 2,
+      "title": "ACL drift counter by transport",
+      "description": "acl_drift_total broken down by transport. A non-zero rate here is the early-warning system Module 5 advertises - when upstream changes something, the ACL catches it before it reaches Order's domain layer.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 0, "y": 9},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "sum by (transport, type) (rate(workshop_acl_drift_total[5m]))",
+          "legendFormat": "{{transport}} / {{type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 5}
+        }
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list", "placement": "right"},
+        "tooltip": {"mode": "multi"}
+      }
+    },
+    {
+      "id": 3,
+      "title": "ACL translation-failure counter by transport",
+      "description": "acl_failures_total broken down by transport and category. Distinct from drift: a failure is when the translation could not produce a valid Order-language outcome, even if the wire call itself succeeded.",
+      "type": "timeseries",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "gridPos": {"h": 9, "w": 12, "x": 12, "y": 9},
+      "targets": [
+        {
+          "datasource": {"type": "prometheus", "uid": "prometheus"},
+          "editorMode": "code",
+          "expr": "sum by (transport, category) (rate(workshop_acl_failures_total[5m]))",
+          "legendFormat": "{{transport}} / {{category}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "color": {"mode": "palette-classic"},
+          "custom": {"drawStyle": "line", "lineWidth": 2, "fillOpacity": 5}
+        }
+      },
+      "options": {
+        "legend": {"showLegend": true, "displayMode": "list", "placement": "right"},
+        "tooltip": {"mode": "multi"}
+      }
+    }
+  ]
+}

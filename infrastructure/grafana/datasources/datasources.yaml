@@ -1,0 +1,134 @@
+# =============================================================================
+# Grafana datasource provisioning
+# =============================================================================
+# The cross-datasource links here are what make the workshop's
+# "click from metric to trace to logs" experience work:
+#
+#   Prometheus exemplar (trace_id) ----> Tempo trace
+#   Tempo span (order.id, trace_id) ---> Loki logs
+#   Loki log line (trace_id stream attr) -> Tempo trace (auto via Tempo DS)
+#
+# Field-name conventions used here:
+#
+# - Prometheus exemplar key:  trace_id (Prometheus / OpenMetrics convention)
+#
+# - Loki: when logs are shipped via the OTel Collector's Loki exporter,
+#   ONLY a small set of OTel resource attributes become indexed stream
+#   labels (default: ~17 well-known keys, with periods replaced by
+#   underscores). Everything else becomes per-line stream attributes
+#   (effectively structured metadata). In our setup the indexed labels
+#   are: service_name, service_namespace, deployment_environment.
+#   Per-line stream attributes include: trace_id, span_id, order_id,
+#   cart_id, customer_id, notification_id, etc.
+#
+#   See: https://grafana.com/docs/loki/latest/get-started/labels/
+#
+# Why no derivedFields here:
+#   Earlier versions of this file had Loki derivedFields with regexes
+#   like `"trace_id":"([a-f0-9]{32})"` that scanned the raw log line for
+#   a JSON-formatted trace id. With the OTel collector pipeline, the log
+#   line is the plain message text - the trace_id and order_id are stream
+#   attributes attached to the line, not embedded in it. Grafana 11
+#   automatically renders stream attributes (including trace_id) as
+#   filterable, navigable fields in the log details panel; the
+#   trace-to-logs link from Tempo handles the reverse direction. So we
+#   removed the broken regex-based derivedFields rather than replace
+#   them with a workaround.
+#
+# If a future Quarkus or OTel collector version changes these conventions,
+# this is the file that needs updating.
+# =============================================================================
+
+apiVersion: 1
+
+datasources:
+  # ---------------------------------------------------------------------------
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true
+    jsonData:
+      httpMethod: POST
+      manageAlerts: false
+      prometheusType: Prometheus
+      prometheusVersion: 2.55.0
+      timeInterval: 15s
+      # Exemplars: when a metric data point has a trace_id exemplar attached,
+      # show a button that jumps to the corresponding trace in Tempo.
+      # The exemplar key in Prometheus is trace_id (snake_case) per the
+      # OpenMetrics spec.
+      exemplarTraceIdDestinations:
+        - name: trace_id
+          datasourceUid: tempo
+
+  # ---------------------------------------------------------------------------
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: true
+    jsonData:
+      httpMethod: GET
+      # ----- Trace-to-logs (Tempo span -> Loki query) ------------------------
+      # The query filters logs by either order.id (the span attribute we
+      # populate during 3a) or trace_id, both via Loki stream-attribute
+      # label filters. No `| json` parser is needed - the OTel collector
+      # already exposes these as queryable stream attributes.
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: -5m
+        spanEndTimeShift: 5m
+        filterByTraceID: false
+        filterBySpanID: false
+        customQuery: true
+        # The first form covers spans with order.id; the second covers
+        # auto-instrumented spans without a domain id (using trace_id only).
+        # Stream attribute names are snake_case in Loki (the OTel collector
+        # converts dots to underscores).
+        query: '{service_namespace="workshop"} | order_id="$${__span.tags["order.id"]}" or trace_id="$${__trace.traceId}"'
+        tags:
+          - key: service.name
+            value: service_name
+
+      # ----- Trace-to-metrics (Tempo span -> Prometheus query) ---------------
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: -2m
+        spanEndTimeShift: 2m
+        tags:
+          - key: service.name
+            value: service
+        queries:
+          - name: Request rate
+            query: 'sum(rate(workshop_http_server_request_duration_seconds_count{service="$${__tags["service"]}"}[1m]))'
+          - name: Checkout outcomes by tier
+            query: 'sum by (tier, outcome) (rate(workshop_checkout_outcomes_total[5m]))'
+
+      # ----- Service graph + span metrics ------------------------------------
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      streamingEnabled:
+        search: true
+
+  # ---------------------------------------------------------------------------
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      # No derivedFields. With the OTel collector pipeline, trace_id and
+      # order_id are stream attributes that Grafana 11 surfaces directly
+      # in the log details panel (clickable to filter, expandable to
+      # inspect). The trace-to-logs reverse direction is handled by the
+      # Tempo datasource's tracesToLogsV2 above.

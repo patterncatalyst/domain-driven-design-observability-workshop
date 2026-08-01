@@ -1,0 +1,40 @@
+# =============================================================================
+# OpenTelemetry Collector - the central nervous system
+# =============================================================================
+# Receives OTLP from all services, fans out to Tempo/Prom/Loki.
+# Module 6 enables the tail-sampling processor in the config.
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: workshop-otel-collector
+    command: ["--config=/etc/otel/config.yaml"]
+    volumes:
+      - ../otel-collector/config.yaml:/etc/otel/config.yaml:ro,Z
+    ports:
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+      - "8888:8888"     # Collector's own metrics (Prom scrape target)
+      - "8889:8889"     # Prometheus exporter (services' metrics, scraped by Prom)
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8888/metrics || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    depends_on:
+      tempo:
+        condition: service_started
+      loki:
+        condition: service_started
+    networks:
+      - workshop
+
+networks:
+  workshop:
+    name: workshop
+    driver: bridge

@@ -1,0 +1,56 @@
+{
+  "annotations": { "list": [] },
+  "description": "Tempo search and service graph. Entry point for the trace-driven modules.",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "description": "Recent traces from all workshop services. Click a trace to drill in.",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {},
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "filters": [
+            { "id": "service-name", "operator": "=", "scope": "resource", "tag": "service.namespace", "value": "workshop", "valueType": "string" }
+          ],
+          "limit": 20,
+          "query": "{ resource.service.namespace=\"workshop\" }",
+          "queryType": "traceql",
+          "refId": "A",
+          "tableType": "traces"
+        }
+      ],
+      "title": "Recent traces",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "description": "Service graph derived from spans. Updates as traffic flows.",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 },
+      "id": 2,
+      "options": {},
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "serviceMap",
+          "refId": "A"
+        }
+      ],
+      "title": "Service graph",
+      "type": "nodeGraph"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["workshop", "traces"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "timezone": "browser",
+  "title": "Workshop / Trace Explorer",
+  "uid": "workshop-trace-explorer",
+  "version": 1
+}

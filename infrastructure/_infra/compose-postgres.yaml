@@ -1,0 +1,35 @@
+# =============================================================================
+# PostgreSQL - available for participants who want to extend beyond in-memory
+# =============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: workshop-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+      POSTGRES_DB: appdb
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - workshop
+
+volumes:
+  postgres-data:
+
+networks:
+  workshop:
+    name: workshop
+    driver: bridge
