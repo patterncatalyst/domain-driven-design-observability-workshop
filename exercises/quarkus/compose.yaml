@@ -1,0 +1,118 @@
+include:
+  - path: ../../infrastructure/_infra/compose-kafka.yaml
+  - path: ../../infrastructure/_infra/compose-postgres.yaml
+  - path: ../../infrastructure/_infra/compose-otel-collector.yaml
+  - path: ../../infrastructure/_infra/compose-tempo.yaml
+  - path: ../../infrastructure/_infra/compose-prometheus.yaml
+  - path: ../../infrastructure/_infra/compose-loki.yaml
+  - path: ../../infrastructure/_infra/compose-grafana.yaml
+
+services:
+
+  order-service:
+    build: ./order-service
+    container_name: workshop-order
+    ports:
+      - "8080:8080"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: order-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      INVENTORY_REST_URL: http://inventory-service:8081
+      PAYMENT_REST_URL: http://payment-service:8082
+      SHIPPING_REST_URL: http://shipping-service:8083
+      INVENTORY_GRPC_HOST: inventory-service
+      INVENTORY_GRPC_PORT: 9001
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+      inventory-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      shipping-service:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - workshop
+
+  inventory-service:
+    build: ./inventory-service
+    container_name: workshop-inventory
+    ports:
+      - "8081:8081"
+      - "9001:9001"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: inventory-service
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - workshop
+
+  payment-service:
+    build: ./payment-service
+    container_name: workshop-payment
+    ports:
+      - "8082:8082"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: payment-service
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - workshop
+
+  shipping-service:
+    build: ./shipping-service
+    container_name: workshop-shipping
+    ports:
+      - "8083:8083"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: shipping-service
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - workshop
+
+  notification-service:
+    build: ./notification-service
+    container_name: workshop-notification
+    ports:
+      - "8084:8084"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: notification-service
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - workshop

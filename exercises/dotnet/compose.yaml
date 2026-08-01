@@ -1,0 +1,172 @@
+# =============================================================================
+# DDD + Observability Workshop — .NET 10 track
+# =============================================================================
+# Start everything:   docker compose up --build -d
+# Tear down:          docker compose down -v
+# =============================================================================
+
+include:
+  - path: ../../infrastructure/_infra/compose-kafka.yaml
+  - path: ../../infrastructure/_infra/compose-postgres.yaml
+  - path: ../../infrastructure/_infra/compose-otel-collector.yaml
+  - path: ../../infrastructure/_infra/compose-tempo.yaml
+  - path: ../../infrastructure/_infra/compose-prometheus.yaml
+  - path: ../../infrastructure/_infra/compose-loki.yaml
+  - path: ../../infrastructure/_infra/compose-grafana.yaml
+
+services:
+  # ---------------------------------------------------------------------------
+  # order-service — Saga orchestrator
+  # ---------------------------------------------------------------------------
+  order-service:
+    build:
+      context: .
+      dockerfile: OrderService/Dockerfile
+    container_name: workshop-order
+    ports:
+      - "8080:8080"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: order-service
+      Kafka__BootstrapServers: kafka:29092
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/q/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # inventory-service — Stock reservation
+  # ---------------------------------------------------------------------------
+  inventory-service:
+    build:
+      context: .
+      dockerfile: InventoryService/Dockerfile
+    container_name: workshop-inventory
+    ports:
+      - "8081:8081"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: inventory-service
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/q/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # payment-service — Payment authorization
+  # ---------------------------------------------------------------------------
+  payment-service:
+    build:
+      context: .
+      dockerfile: PaymentService/Dockerfile
+    container_name: workshop-payment
+    ports:
+      - "8082:8082"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: payment-service
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/q/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # shipping-service — Shipment scheduling
+  # ---------------------------------------------------------------------------
+  shipping-service:
+    build:
+      context: .
+      dockerfile: ShippingService/Dockerfile
+    container_name: workshop-shipping
+    ports:
+      - "8083:8083"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: shipping-service
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/q/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # notification-service — Kafka consumer, sends notifications
+  # ---------------------------------------------------------------------------
+  notification-service:
+    build:
+      context: .
+      dockerfile: NotificationService/Dockerfile
+    container_name: workshop-notification
+    ports:
+      - "8084:8084"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: notification-service
+      Kafka__BootstrapServers: kafka:29092
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8084/q/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - workshop
+
+networks:
+  workshop:
+    name: workshop
+    driver: bridge

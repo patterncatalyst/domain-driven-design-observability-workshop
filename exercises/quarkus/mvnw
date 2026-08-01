@@ -1,0 +1,179 @@
+#!/bin/sh
+# ----------------------------------------------------------------------------
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
+# Apache Maven Wrapper startup batch script, version 3.3.2
+#
+# Optional ENV vars
+#   JAVA_HOME - location of a JDK home dir, required when download maven via java source
+#   MVNW_REPOURL - repo url base for downloading maven distribution
+#   MVNW_USERNAME/MVNW_PASSWORD - user and password for downloading maven
+#   MVNW_VERBOSE - true: enable verbose log; debug: trace the mvnw script; others: silence the output
+# ----------------------------------------------------------------------------
+
+set -euf
+[ "${MVNW_VERBOSE-}" != debug ] || set -x
+
+# OS specific support.
+native_path() { printf %s\\n "$1"; }
+case "$(uname)" in
+CYGWIN* | MINGW*)
+  [ -z "${JAVA_HOME-}" ] || JAVA_HOME="$(cygpath --unix "$JAVA_HOME")"
+  native_path() { cygpath --path --windows "$1"; }
+  ;;
+esac
+
+# set JAVA_CMD
+# https://github.com/apache/maven-mvnw/blob/maven-wrapper-3.3.2/src/main/script/mvnw.sh
+if [ -n "${JAVA_HOME-}" ]; then
+  if [ -x "$JAVA_HOME/jre/sh/java" ]; then
+    JAVA_CMD="$JAVA_HOME/jre/sh/java"
+  else
+    JAVA_CMD="$JAVA_HOME/bin/java"
+    if [ ! -x "$JAVA_CMD" ]; then
+      die "ERROR: JAVA_HOME is set to an invalid directory: $JAVA_HOME
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+    fi
+  fi
+else
+  JAVA_CMD="$(
+    'set' +e
+    'unset' -f command 2>/dev/null
+    'command' -v java
+  )" || :
+  if [ ! -x "${JAVA_CMD-}" ]; then
+    die "ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH.
+Please set the JAVA_HOME variable in your environment to match the
+location of your Java installation."
+  fi
+fi
+
+# hash string like  "cef3b517c11281de0c6fc9bfa043f5ad (mvnw text file checksum)"
+# followed by "  mvnw"
+die() {
+  printf %s\\n "$1" >&2
+  exit 1
+}
+
+# parse distributionUrl, currentDir, and wrapperUrl from maven-wrapper.properties
+currentDir="$(cd -- "$(dirname -- "$0")" && pwd -P)"
+distributionUrl=
+wrapperUrl=
+wrapperSha256Sum=
+while IFS="=" read -r key value; do
+  case "${key-}" in
+  distributionUrl) distributionUrl="${value-}" ;;
+  wrapperUrl) wrapperUrl="${value-}" ;;
+  wrapperSha256Sum) wrapperSha256Sum="${value-}" ;;
+  esac
+done <"$currentDir/.mvn/wrapper/maven-wrapper.properties"
+[ -n "${distributionUrl-}" ] || die "ERROR: distributionUrl is not set in maven-wrapper.properties"
+
+# resolve the download URL
+case "${distributionUrl##*/}" in
+maven-mvnd-*bin.*)
+  MVN_CMD=mvnd.sh
+  ;;
+*)
+  MVN_CMD="mvn${0##*/mvnw}"
+  ;;
+esac
+
+# apply MVNW_REPOURL override if given
+case "${MVNW_REPOURL-}" in
+*/*)
+  distributionUrl="$MVNW_REPOURL/${distributionUrl#*"repo.maven.apache.org/maven2/"}"
+  wrapperUrl="$MVNW_REPOURL/${wrapperUrl#*"repo.maven.apache.org/maven2/"}"
+  ;;
+esac
+
+# Provide a "nice" error message if the wrapper jar hasn't been downloaded yet
+wrapperJarPath="$currentDir/.mvn/wrapper/maven-wrapper.jar"
+if [ -r "$wrapperJarPath" ]; then
+  if [ -n "${wrapperSha256Sum-}" ]; then
+    wrapperChecksum="$(sha256sum -- "$wrapperJarPath" 2>/dev/null | cut -d' ' -f1)"
+    [ "${wrapperChecksum-}" = "${wrapperSha256Sum}" ] || rm -f -- "$wrapperJarPath"
+  fi
+fi
+
+if [ -r "$wrapperJarPath" ]; then
+  # Use the wrapper jar to launch maven
+  javaSource=""
+  javaExec="$JAVA_CMD"
+  wrapperLauncher=org.apache.maven.wrapper.MavenWrapperMain
+  exec "$javaExec" \
+    $MAVEN_OPTS \
+    "${javaSource[@]}" \
+    -classpath "$wrapperJarPath" \
+    "-Dmaven.multiModuleProjectDirectory=$currentDir" \
+    $wrapperLauncher $MAVEN_ARGS "$@"
+fi
+
+# Download distribution (only-script mode: no wrapper jar)
+distributionUrlNormalized="$(printf %s\\n "$distributionUrl" | tr -s / | sed 's:/\./:/:g')"
+distributionUrlName="${distributionUrlNormalized##*/}"
+distributionUrlNameMain="${distributionUrlName%%.*}"
+distributionUrlNameExt=".${distributionUrlName#*.}"
+
+# Set user home for maven
+MAVEN_USER_HOME="${MAVEN_USER_HOME:-${HOME}/.m2}"
+MAVEN_HOME="${MAVEN_USER_HOME}/wrapper/dists/${distributionUrlNameMain}${distributionUrlNameExt%%.zip}"
+
+if [ -d "$MAVEN_HOME" ]; then
+  MVN_HOME="$MAVEN_HOME"
+else
+  mkdir -p -- "$MAVEN_HOME" 2>/dev/null || :
+
+  # Download and extract
+  if [ "${MVNW_VERBOSE-}" = true ]; then
+    echo "Downloading from: $distributionUrl"
+  fi
+
+  TMP_DOWNLOAD_DIR="${MAVEN_USER_HOME}/wrapper/dists/tmp$$"
+  mkdir -p -- "$TMP_DOWNLOAD_DIR"
+  TMP_FILE="$TMP_DOWNLOAD_DIR/$distributionUrlName"
+
+  # Use curl or wget to download
+  if command -v curl >/dev/null 2>&1; then
+    curl ${MVNW_USERNAME:+--user "$MVNW_USERNAME:$MVNW_PASSWORD"} \
+      -fsSL --retry 3 -o "$TMP_FILE" "$distributionUrl" || die "ERROR: Failed to download $distributionUrl"
+  elif command -v wget >/dev/null 2>&1; then
+    wget ${MVNW_USERNAME:+--user="$MVNW_USERNAME" --password="$MVNW_PASSWORD"} \
+      --quiet -O "$TMP_FILE" "$distributionUrl" || die "ERROR: Failed to download $distributionUrl"
+  else
+    die "ERROR: Neither curl nor wget found. Install one to use the Maven wrapper."
+  fi
+
+  # Extract
+  if [ "${MVNW_VERBOSE-}" = true ]; then
+    echo "Extracting to: $MAVEN_HOME"
+  fi
+  unzip -q -o "$TMP_FILE" -d "$MAVEN_HOME" || die "ERROR: Failed to extract $TMP_FILE"
+  rm -rf -- "$TMP_DOWNLOAD_DIR"
+
+  MVN_HOME="$MAVEN_HOME"
+fi
+
+# Find the mvn executable in the extracted distribution
+MVN_EXECUTABLE="$(find "$MVN_HOME" -name "$MVN_CMD" -type f 2>/dev/null | head -1)"
+[ -x "$MVN_EXECUTABLE" ] || die "ERROR: Could not find $MVN_CMD in $MVN_HOME"
+
+exec "$MVN_EXECUTABLE" $MAVEN_ARGS "$@"

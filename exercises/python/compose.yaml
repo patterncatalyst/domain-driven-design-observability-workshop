@@ -1,0 +1,144 @@
+# =============================================================================
+# DDD + Observability Workshop - Python/FastAPI services
+# =============================================================================
+# Includes shared infrastructure fragments from ../../infrastructure/_infra/
+# and defines the 5 application microservices.
+
+include:
+  - path: ../../infrastructure/_infra/compose-kafka.yaml
+  - path: ../../infrastructure/_infra/compose-postgres.yaml
+  - path: ../../infrastructure/_infra/compose-otel-collector.yaml
+  - path: ../../infrastructure/_infra/compose-tempo.yaml
+  - path: ../../infrastructure/_infra/compose-prometheus.yaml
+  - path: ../../infrastructure/_infra/compose-loki.yaml
+  - path: ../../infrastructure/_infra/compose-grafana.yaml
+
+services:
+  # ---------------------------------------------------------------------------
+  # order-service - Saga orchestrator, coordinates checkout
+  # ---------------------------------------------------------------------------
+  order-service:
+    build:
+      context: ./order_service
+      dockerfile: Dockerfile
+    container_name: workshop-order
+    ports:
+      - "8080:8080"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "order-service"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # inventory-service - Stock reservation
+  # ---------------------------------------------------------------------------
+  inventory-service:
+    build:
+      context: ./inventory_service
+      dockerfile: Dockerfile
+    container_name: workshop-inventory
+    ports:
+      - "8081:8081"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "inventory-service"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # payment-service - Payment authorization
+  # ---------------------------------------------------------------------------
+  payment-service:
+    build:
+      context: ./payment_service
+      dockerfile: Dockerfile
+    container_name: workshop-payment
+    ports:
+      - "8082:8082"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "payment-service"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # shipping-service - Shipment scheduling
+  # ---------------------------------------------------------------------------
+  shipping-service:
+    build:
+      context: ./shipping_service
+      dockerfile: Dockerfile
+    container_name: workshop-shipping
+    ports:
+      - "8083:8083"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "shipping-service"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - workshop
+
+  # ---------------------------------------------------------------------------
+  # notification-service - Kafka consumer, sends notifications
+  # ---------------------------------------------------------------------------
+  notification-service:
+    build:
+      context: ./notification_service
+      dockerfile: Dockerfile
+    container_name: workshop-notification
+    ports:
+      - "8084:8084"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+      OTEL_SERVICE_NAME: "notification-service"
+      KAFKA_BOOTSTRAP_SERVERS: "kafka:29092"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      kafka:
+        condition: service_healthy
+      otel-collector:
+        condition: service_healthy
+    networks:
+      - workshop
+
+networks:
+  workshop:
+    name: workshop
+    driver: bridge

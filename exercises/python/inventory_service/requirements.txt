@@ -1,0 +1,17 @@
+# Core web framework
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.32,<1.0
+pydantic>=2.10,<3.0
+
+# OpenTelemetry
+opentelemetry-api>=1.28,<2.0
+opentelemetry-sdk>=1.28,<2.0
+opentelemetry-instrumentation-fastapi>=0.49b0
+opentelemetry-exporter-otlp>=1.28,<2.0
+
+# Structured logging
+structlog>=24.4,<25.0
+
+# gRPC server (Module 5 - transport comparison)
+grpcio>=1.68,<2.0
+grpcio-tools>=1.68,<2.0

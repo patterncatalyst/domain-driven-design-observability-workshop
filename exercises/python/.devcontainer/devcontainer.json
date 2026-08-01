@@ -1,0 +1,79 @@
+{
+  "name": "DDD + Observability Workshop (Python)",
+  "image": "mcr.microsoft.com/devcontainers/python:3-bookworm",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.14"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
+  },
+
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+
+  "forwardPorts": [
+    3000,
+    9090,
+    3200,
+    3100,
+    4317,
+    4318,
+    9092,
+    5432,
+    8080,
+    8081,
+    8082,
+    8083,
+    8084,
+    9001
+  ],
+
+  "portsAttributes": {
+    "3000":  { "label": "Grafana",            "onAutoForward": "silent" },
+    "9090":  { "label": "Prometheus",         "onAutoForward": "silent" },
+    "3200":  { "label": "Tempo",              "onAutoForward": "silent" },
+    "3100":  { "label": "Loki",               "onAutoForward": "silent" },
+    "4317":  { "label": "OTel gRPC",          "onAutoForward": "silent" },
+    "4318":  { "label": "OTel HTTP",          "onAutoForward": "silent" },
+    "9092":  { "label": "Kafka",              "onAutoForward": "silent" },
+    "5432":  { "label": "PostgreSQL",         "onAutoForward": "silent" },
+    "8080":  { "label": "Order Service",      "onAutoForward": "notify" },
+    "8081":  { "label": "Inventory Service",  "onAutoForward": "notify" },
+    "8082":  { "label": "Payment Service",    "onAutoForward": "notify" },
+    "8083":  { "label": "Shipping Service",   "onAutoForward": "notify" },
+    "8084":  { "label": "Notification Service","onAutoForward": "notify" },
+    "9001":  { "label": "Kafka UI",           "onAutoForward": "silent" }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "postStartCommand": "bash .devcontainer/post-start.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "humao.rest-client",
+        "ms-azuretools.vscode-docker",
+        "yzhang.markdown-all-in-one"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.analysis.typeCheckingMode": "basic",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.python"
+        }
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}

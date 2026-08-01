@@ -1,0 +1,17 @@
+target/
+.mvn/wrapper/maven-wrapper.jar.lck
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+.DS_Store
+Thumbs.db
+*.log
+.quarkus/
+hs_err_pid*
+.git/
+.gitignore
+*.md
+.github/
