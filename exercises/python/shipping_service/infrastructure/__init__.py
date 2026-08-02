@@ -1,2 +1,4 @@
-# Infrastructure layer - repositories, shipping provider adapters
-# To be filled during workshop modules.
+# Infrastructure layer - REST adapters, external integrations
+from infrastructure.routes import router
+
+__all__ = ["router"]

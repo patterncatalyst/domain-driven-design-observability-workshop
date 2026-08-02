@@ -1,2 +1,10 @@
-# Domain layer - aggregates, entities, value objects, domain events
-# To be filled during workshop modules.
+# Domain layer - aggregates, value objects, domain identifiers
+from domain.models import Authorization, AuthorizationId, AuthorizationOutcome
+from domain.identifiers import PaymentContextKey
+
+__all__ = [
+    "Authorization",
+    "AuthorizationId",
+    "AuthorizationOutcome",
+    "PaymentContextKey",
+]
