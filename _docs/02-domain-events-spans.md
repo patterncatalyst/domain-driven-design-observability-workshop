@@ -286,6 +286,47 @@ Notice the `BaggageHelpers.put()` / `set_baggage()` / `BaggageHelpers.Set()` cal
 
 ---
 
+**Step 2b: Add a custom span attribute**
+
+This is a hands-on exercise. The payment service's `AuthorizePaymentUseCase` already sets several span attributes. You are going to add one more: `payment.risk_score` -- a simulated risk score based on the payment amount.
+
+Open the file for your language:
+
+| Language | File |
+|----------|------|
+| Quarkus | `payment-service/src/main/java/com/example/payment/application/AuthorizePaymentUseCase.java` |
+| Python | `payment_service/application/authorize_payment.py` |
+| C# | `PaymentService/Application/AuthorizePaymentUseCase.cs` |
+
+Find the line that sets `span.setAttribute("payment.currency", ...)` (or `span.set_attribute` / `activity?.SetTag`). **Add the following line directly after it:**
+
+{% include codetabs.html langs="Quarkus|Python|C#" %}
+
+```java
+// Add this line after span.setAttribute("payment.currency", ...);
+span.setAttribute("payment.risk_score", command.amount().doubleValue() > 100.0 ? "high" : "normal");
+```
+
+```python
+# Add this line after span.set_attribute("payment.currency", ...):
+span.set_attribute("payment.risk_score", "high" if command.amount > 100.0 else "normal")
+```
+
+```csharp
+// Add this line after activity?.SetTag("payment.currency", ...);
+activity?.SetTag("payment.risk_score", command.Amount > 100m ? "high" : "normal");
+```
+
+**Save the file.** The service will automatically rebuild (Quarkus dev mode) or you will need to restart the container:
+
+```bash
+docker compose restart payment-service
+```
+
+**Verify:** Run a checkout and check the trace in Tempo. Find the `Payment.Authorize` span -- you should see `payment.risk_score = "normal"` (for amounts <= 100) or `payment.risk_score = "high"` (for amounts > 100) in the span attributes.
+
+---
+
 **Step 3: Browse domain events**
 
 Domain events are things that happened in the domain that other parts of the system care about. In our checkout flow, the Order context publishes three events:

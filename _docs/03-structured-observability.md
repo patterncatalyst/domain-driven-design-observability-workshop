@@ -282,6 +282,57 @@ Notice the label discipline: `outcome` is a small enum (success, cancelled_inven
 
 ---
 
+## Step 3b -- Add a structured log line for checkout success
+
+This is a hands-on exercise. The CheckoutSaga logs when a checkout starts (`"Checkout starting"`) and when it is cancelled (`"Checkout cancelled"`), but it does not log when a checkout succeeds. You are going to add that missing log line so the success path is visible in Loki alongside the other signals.
+
+Open the CheckoutSaga file for your language:
+
+| Language | File |
+|----------|------|
+| Quarkus | `order-service/src/main/java/com/example/order/application/CheckoutSaga.java` |
+| Python | `order_service/application/checkout_saga.py` |
+| C# | `OrderService/Application/CheckoutSaga.cs` |
+
+Find the success path -- the block where the order is confirmed after all saga steps succeed. In Quarkus, this is the `case ShipmentOutcome.Scheduled s` branch inside `continueAfterAuthorization`. In Python, it is the `if isinstance(shipping_outcome, Scheduled)` block in `_continue_after_authorization`. In C#, it is the `ConfirmAndRecord` method.
+
+**Add this log line after `recordOutcome` / `_record_outcome` / `RecordOutcome` and before the return statement:**
+
+{% include codetabs.html langs="Quarkus|Python|C#" %}
+
+```java
+// Add before the yield in the Scheduled case:
+log.info("Checkout confirmed: reservation={} authorization={} shipment={}",
+        reservationId, authorizationId, s.shipmentId());
+```
+
+```python
+# Add before the return statement in the Scheduled branch:
+logger.info("Checkout confirmed", reservation_id=reservation_id, authorization_id=authorization_id, shipment_id=shipping_outcome.shipment_id)
+```
+
+```csharp
+// Add before the return statement in ConfirmAndRecord:
+_logger.LogInformation("Checkout confirmed: reservation={ReservationId} authorization={AuthorizationId} shipment={ShipmentId}",
+    reservationId, authorizationId, shipmentId);
+```
+
+**Save and restart:**
+
+```bash
+docker compose restart order-service
+```
+
+**Verify:** Run a checkout, then query Loki in Grafana Explore:
+
+```
+{service_name="order-service"} |= "Checkout confirmed"
+```
+
+You should see the log line with `reservation_id`, `authorization_id`, and `shipment_id` fields, plus `order.id` and `customer.id` inherited from the DomainContext scope that was opened at the top of the `checkout` method.
+
+---
+
 ## Step 4 -- Browse the ACL adapter
 
 When two bounded contexts have different vocabularies, the **Anti-Corruption Layer** (ACL) translates between them. This is a core DDD pattern from Eric Evans and Vlad Khononov: it prevents one context's model from leaking into another.
