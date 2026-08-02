@@ -1,20 +1,19 @@
-# =============================================================================
-# Payment Service - multi-stage build on UBI 10 Python 3.14
-# =============================================================================
-
-FROM registry.access.redhat.com/ubi10/python-314:latest AS builder
+# Build context is exercises/python/ (the project root)
+FROM registry.access.redhat.com/ubi9/python-312:latest
 
 WORKDIR /opt/app-root/src
-COPY requirements.txt .
+
+# Install dependencies (shared + service-specific)
+COPY shared_observability/ ./shared_observability/
+COPY payment_service/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
 
-FROM registry.access.redhat.com/ubi10/python-314:latest
+# Copy service code
+COPY payment_service/ ./payment_service/
 
-WORKDIR /opt/app-root/src
-COPY --from=builder /opt/app-root/lib /opt/app-root/lib
-COPY --from=builder /opt/app-root/src .
+# PYTHONPATH includes project root so shared_observability is importable
+ENV PYTHONPATH=/opt/app-root/src
 
+WORKDIR /opt/app-root/src/payment_service
 EXPOSE 8082
-
 CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8082"]

@@ -19,8 +19,8 @@ services:
   # ---------------------------------------------------------------------------
   order-service:
     build:
-      context: ./order_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: order_service/Dockerfile
     container_name: workshop-order
     ports:
       - "8080:8080"
@@ -34,9 +34,9 @@ services:
           memory: 256M
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     networks:
       - workshop
 
@@ -45,8 +45,8 @@ services:
   # ---------------------------------------------------------------------------
   inventory-service:
     build:
-      context: ./inventory_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: inventory_service/Dockerfile
     container_name: workshop-inventory
     ports:
       - "8081:8081"
@@ -60,7 +60,7 @@ services:
           memory: 256M
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     networks:
       - workshop
 
@@ -69,8 +69,8 @@ services:
   # ---------------------------------------------------------------------------
   payment-service:
     build:
-      context: ./payment_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: payment_service/Dockerfile
     container_name: workshop-payment
     ports:
       - "8082:8082"
@@ -84,7 +84,7 @@ services:
           memory: 256M
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     networks:
       - workshop
 
@@ -93,8 +93,8 @@ services:
   # ---------------------------------------------------------------------------
   shipping-service:
     build:
-      context: ./shipping_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: shipping_service/Dockerfile
     container_name: workshop-shipping
     ports:
       - "8083:8083"
@@ -108,7 +108,7 @@ services:
           memory: 256M
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     networks:
       - workshop
 
@@ -117,8 +117,8 @@ services:
   # ---------------------------------------------------------------------------
   notification-service:
     build:
-      context: ./notification_service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: notification_service/Dockerfile
     container_name: workshop-notification
     ports:
       - "8084:8084"
@@ -132,9 +132,9 @@ services:
           memory: 256M
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     networks:
       - workshop
 

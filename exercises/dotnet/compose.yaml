@@ -35,9 +35,9 @@ services:
           memory: 384M
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/q/health/ready || exit 1"]
       interval: 10s
@@ -66,7 +66,7 @@ services:
           memory: 384M
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/q/health/ready || exit 1"]
       interval: 10s
@@ -95,7 +95,7 @@ services:
           memory: 384M
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8082/q/health/ready || exit 1"]
       interval: 10s
@@ -124,7 +124,7 @@ services:
           memory: 384M
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8083/q/health/ready || exit 1"]
       interval: 10s
@@ -154,9 +154,9 @@ services:
           memory: 384M
     depends_on:
       kafka:
-        condition: service_healthy
+        condition: service_started
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8084/q/health/ready || exit 1"]
       interval: 10s
