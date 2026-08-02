@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "exercises/**"
+      - "tests/**"
+      - "infrastructure/**"
+      - ".github/workflows/ci.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  quarkus-build:
+    name: Build Quarkus
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: exercises/quarkus
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+
+      - name: Build with Maven
+        run: ./mvnw -B -ntp install -DskipTests
+
+  python-build:
+    name: Build Python
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: exercises/python
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install shared_observability
+        run: pip install -e shared_observability/ 2>/dev/null || pip install -r order_service/requirements.txt
+
+      - name: Validate imports
+        run: |
+          python -c "from shared_observability import DomainContext, get_baggage, set_baggage"
+          python -c "from payment_service.domain.models import Authorization, AuthorizationOutcome"
+          python -c "from shipping_service.domain.models import Shipment, ShipmentId"
+          python -c "from inventory_service.domain.models import Reservation, ReservationStatus"
+
+  dotnet-build:
+    name: Build C#
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: exercises/dotnet
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore and build
+        run: dotnet build DddWorkshop.sln -c Release
+
+  newman-smoke:
+    name: Newman smoke test (collections validate)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Newman
+        run: npm install -g newman
+
+      - name: Validate collection syntax
+        run: |
+          for f in tests/collections/*.json; do
+            echo "Validating $(basename $f)..."
+            node -e "const c = require('./$f'); if (!c.info || !c.item) throw new Error('Invalid collection')"
+          done
+          echo "All collections valid."
