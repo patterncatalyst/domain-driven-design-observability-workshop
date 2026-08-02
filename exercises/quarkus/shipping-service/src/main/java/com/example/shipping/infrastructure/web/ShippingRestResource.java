@@ -10,7 +10,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 
-@Path("/api/shipping")
+@Path("/api/shipments")
 public class ShippingRestResource {
 
     private final ScheduleShipmentUseCase useCase;

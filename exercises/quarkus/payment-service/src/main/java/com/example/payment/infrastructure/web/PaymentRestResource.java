@@ -19,7 +19,7 @@ import java.math.BigDecimal;
  * pattern in Order's {@code PaymentRestClient}. The vocabularies align,
  * so a separate {@code dto/} package would be busywork.
  */
-@Path("/api/payment")
+@Path("/api/payments")
 public class PaymentRestResource {
 
     private final AuthorizePaymentUseCase useCase;

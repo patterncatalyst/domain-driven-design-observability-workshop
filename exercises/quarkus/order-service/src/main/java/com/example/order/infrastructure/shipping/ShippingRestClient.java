@@ -8,7 +8,7 @@ import jakarta.ws.rs.core.MediaType;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
 
 @RegisterRestClient(configKey = "shipping-rest")
-@Path("/api/shipping")
+@Path("/api/shipments")
 public interface ShippingRestClient {
 
     @POST
