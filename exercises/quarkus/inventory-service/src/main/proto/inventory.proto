@@ -1,0 +1,47 @@
+// =============================================================================
+// Inventory service contract - Inventory's own copy
+// =============================================================================
+// Same wire contract as the duplicate in Order's src/main/proto/. The
+// duplication is deliberate: Quarkus's gRPC code generation works most
+// reliably with a per-module src/main/proto, and the duplication makes
+// the cross-context wire contract physically visible in both repos.
+//
+// Module 5 discusses this as a teaching moment: changing this file
+// without updating Order's copy doesn't break the build but does break
+// the wire contract.
+// =============================================================================
+
+syntax = "proto3";
+
+package com.example.inventory.v1;
+
+option java_package = "com.example.inventory.v1";
+option java_multiple_files = true;
+option java_outer_classname = "InventoryProto";
+
+service InventoryService {
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+}
+
+message ReserveRequest {
+  string order_id    = 1;
+  string customer_id = 2;
+  repeated LineItem line_items = 3;
+}
+
+message LineItem {
+  string sku      = 1;
+  int32  quantity = 2;
+}
+
+message ReserveResponse {
+  string             reservation_id = 1;
+  ReservationStatus  status         = 2;
+}
+
+enum ReservationStatus {
+  RESERVATION_STATUS_UNSPECIFIED = 0;
+  RESERVATION_STATUS_RESERVED    = 1;
+  RESERVATION_STATUS_PARTIAL     = 2;
+  RESERVATION_STATUS_UNAVAILABLE = 3;
+}

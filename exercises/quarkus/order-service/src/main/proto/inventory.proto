@@ -1,0 +1,53 @@
+// =============================================================================
+// Inventory service contract - Order's local copy
+// =============================================================================
+// This file is duplicated in the Inventory service. The duplication is
+// deliberate (and discussed in Module 5): Quarkus's gRPC code generation
+// expects each module to have its own src/main/proto directory, and
+// cross-module sharing has known build-time issues. The duplication is
+// itself a teachable boundary: Order and Inventory have AGREED on this
+// contract - if Inventory changes its copy without Order updating, the
+// services build and start, but the wire contract is broken.
+//
+// Module 5's Anti-Corruption Layer treats this file as the wire schema -
+// the InventoryGrpcAdapter translates between Order's domain types and
+// these wire messages.
+// =============================================================================
+
+syntax = "proto3";
+
+package com.example.inventory.v1;
+
+option java_package = "com.example.inventory.v1";
+option java_multiple_files = true;
+option java_outer_classname = "InventoryProto";
+
+service InventoryService {
+  // Reserve stock for an order. Idempotent on order_id - retrying with the
+  // same order_id returns the existing reservation rather than creating
+  // a new one.
+  rpc Reserve(ReserveRequest) returns (ReserveResponse);
+}
+
+message ReserveRequest {
+  string order_id    = 1;
+  string customer_id = 2;
+  repeated LineItem line_items = 3;
+}
+
+message LineItem {
+  string sku      = 1;
+  int32  quantity = 2;
+}
+
+message ReserveResponse {
+  string             reservation_id = 1;
+  ReservationStatus  status         = 2;
+}
+
+enum ReservationStatus {
+  RESERVATION_STATUS_UNSPECIFIED = 0;
+  RESERVATION_STATUS_RESERVED    = 1;
+  RESERVATION_STATUS_PARTIAL     = 2;
+  RESERVATION_STATUS_UNAVAILABLE = 3;
+}
