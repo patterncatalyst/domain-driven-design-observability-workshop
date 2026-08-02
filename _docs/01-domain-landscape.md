@@ -30,7 +30,11 @@ This workshop uses both levels. The five services in our checkout system are fiv
 
 ## 2. Our Domain: E-Commerce Checkout
 
-The workshop models a simplified e-commerce checkout as a **saga** -- a sequence of coordinated operations across multiple bounded contexts. Here are the five contexts and their roles:
+The workshop models a simplified e-commerce checkout as a **saga** — a sequence of coordinated operations across multiple bounded contexts.
+
+{% include excalidraw.html file="bounded-context-map" alt="Bounded Context Map" caption="Five bounded contexts and their integration relationships" %}
+
+Here are the five contexts and their roles:
 
 ### Order Context (Core Subdomain)
 

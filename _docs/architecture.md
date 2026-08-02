@@ -5,6 +5,16 @@ description: "The workshop domain model and infrastructure stack."
 label: "Reference"
 ---
 
+## Diagrams
+
+{% include excalidraw.html file="bounded-context-map" alt="E-commerce bounded context map" caption="Five bounded contexts and their integration relationships" %}
+
+{% include excalidraw.html file="checkout-saga-flow" alt="Checkout saga orchestration flow" caption="Sequential saga: Inventory → Payment → Shipping, then async Notification via Kafka" %}
+
+{% include excalidraw.html file="otel-pipeline" alt="OpenTelemetry pipeline architecture" caption="OTLP from services → Collector → Tempo/Prometheus/Loki → Grafana" %}
+
+{% include excalidraw.html file="ddd-three-layers" alt="Hexagonal architecture layers" caption="Domain (pure) → Application (use cases) → Infrastructure (adapters)" %}
+
 ## System architecture
 
 ```

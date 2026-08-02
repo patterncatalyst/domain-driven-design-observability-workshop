@@ -502,6 +502,8 @@ newman run tests/collections/01-checkout-happy-path.json -e tests/environments/l
 
 Open **Grafana > Explore > Tempo** and find the new trace. Compare it to the trace from Module 1:
 
+{% include excalidraw.html file="trace-comparison" alt="Trace comparison: generic vs domain-named" caption="Top: generic auto-instrumented spans. Bottom: domain-named spans with business attributes." %}
+
 **Before (generic auto-instrumentation):**
 ```
 HTTP POST /api/orders/checkout

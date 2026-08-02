@@ -260,6 +260,8 @@ When two bounded contexts have different vocabularies, the **Anti-Corruption Lay
 
 In our system, the Order context talks about **SKUs** and **line items**. The Inventory context talks about **product codes** and **reservation lines**. The ACL sits in the Order service's infrastructure layer and translates between these vocabularies.
 
+{% include excalidraw.html file="acl-translation" alt="ACL vocabulary translation" caption="Order's Sku/LineItem translated to Inventory's ProductCode/ReservationLine at the ACL boundary" %}
+
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
 ```java
