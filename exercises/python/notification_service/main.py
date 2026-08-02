@@ -1,13 +1,16 @@
 """Notification Service - Kafka consumer that sends customer notifications."""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
+from infrastructure.kafka_consumer import OrderEventConsumer
 from shared_observability import configure_otel
 
 # ---------------------------------------------------------------------------
@@ -16,12 +19,28 @@ from shared_observability import configure_otel
 configure_otel(service_name="notification-service")
 
 # ---------------------------------------------------------------------------
+# Kafka consumer (started/stopped via lifespan)
+# ---------------------------------------------------------------------------
+_kafka_bootstrap = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+_consumer = OrderEventConsumer(bootstrap_servers=_kafka_bootstrap)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage Kafka consumer lifecycle alongside the FastAPI application."""
+    _consumer.start()
+    yield
+    _consumer.stop()
+
+
+# ---------------------------------------------------------------------------
 # FastAPI application
 # ---------------------------------------------------------------------------
 app = FastAPI(
     title="Notification Service",
     version="1.0.0",
     description="Consumes order events from Kafka and dispatches customer notifications.",
+    lifespan=lifespan,
 )
 
 FastAPIInstrumentor.instrument_app(app)
@@ -42,10 +61,8 @@ async def liveness():
 
 
 # ---------------------------------------------------------------------------
-# Service routes - to be implemented during workshop modules
+# No REST business endpoints -- this service is purely event-driven.
 # ---------------------------------------------------------------------------
-# Kafka consumer lifecycle is managed via FastAPI lifespan events.
-# No REST endpoints beyond health checks - this service is event-driven.
 
 
 # ---------------------------------------------------------------------------

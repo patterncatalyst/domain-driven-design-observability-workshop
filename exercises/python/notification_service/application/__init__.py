@@ -1,2 +1,6 @@
-# Application layer - use cases, command/query handlers
-# To be filled during workshop modules.
+# Application layer - use cases
+from application.send_notification import SendNotificationUseCase
+
+__all__ = [
+    "SendNotificationUseCase",
+]
