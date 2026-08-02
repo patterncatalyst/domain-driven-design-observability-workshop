@@ -130,38 +130,35 @@ public class InventoryRestAdapter implements InventoryPort {
         }
 
         return switch (wire.status()) {
-            case AVAILABLE -> {
+            case "RESERVED" -> {
                 if (wire.reservationId() == null || wire.reservationId().isBlank()) {
                     recordDrift("missing_reservation_id");
                     throw new InventoryAclTranslationException(
-                            "Inventory returned AVAILABLE with no reservationId - "
-                            + "wire contract violation");
+                            "Inventory returned RESERVED with no reservationId");
                 }
                 yield new ReservationOutcome.Reserved(wire.reservationId());
             }
 
-            case PARTIAL -> {
-                // Workshop policy: a partial reservation is treated as
-                // unavailable in our current saga - we don't model the
-                // "accept partial" UX. A real Order context would decide
-                // based on customer preference / order policy.
+            case "PARTIALLY_RESERVED" -> {
                 String detail = wire.reason() != null
                         ? wire.reason()
                         : "partial reservation - some items not in stock";
                 yield new ReservationOutcome.Unavailable(detail);
             }
 
-            case UNAVAILABLE -> {
+            case "UNAVAILABLE" -> {
                 String detail = wire.reason() != null
                         ? wire.reason()
                         : "stock unavailable";
                 yield new ReservationOutcome.Unavailable(detail);
             }
+
+            default -> {
+                recordDrift("unknown_status");
+                throw new InventoryAclTranslationException(
+                        "Unknown inventory status: " + wire.status());
+            }
         };
-        // Note: the sealed enum + exhaustive switch means a new status value
-        // upstream would be a *compile* failure here, not a runtime drift.
-        // For runtime-deserialized enums (Jackson), an unknown status comes
-        // through as null - handled above.
     }
 
     // ------------------------------------------------------------------------

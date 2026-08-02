@@ -29,7 +29,10 @@ public class ShippingRestResource {
                 request.customerId(),
                 request.shippingClass(),
                 request.totalLineItemCount()));
-        return new ScheduleResponse(shipment.id().value());
+        return new ScheduleResponse(
+                shipment.id().value(),
+                "SCHEDULED",
+                shipment.estimatedDays());
     }
 
     public record ScheduleRequest(
@@ -39,5 +42,5 @@ public class ShippingRestResource {
             int totalLineItemCount
     ) {}
 
-    public record ScheduleResponse(String shipmentId) {}
+    public record ScheduleResponse(String shipmentId, String outcome, int estimatedDays) {}
 }

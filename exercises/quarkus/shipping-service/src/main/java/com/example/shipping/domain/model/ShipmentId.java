@@ -5,7 +5,7 @@ import java.util.UUID;
 
 public record ShipmentId(String value) {
 
-    private static final String PREFIX = "shp_";
+    private static final String PREFIX = "ship_";
 
     public ShipmentId {
         Objects.requireNonNull(value, "ShipmentId value");

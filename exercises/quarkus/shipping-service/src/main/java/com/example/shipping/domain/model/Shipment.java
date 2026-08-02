@@ -3,17 +3,12 @@ package com.example.shipping.domain.model;
 import java.time.Instant;
 import java.util.Objects;
 
-/**
- * The Shipment aggregate. In the workshop's model, shipping always
- * succeeds - there's no "failed" or "rejected" state. A real Shipping
- * context would have those, plus statuses for in-transit / delivered /
- * etc. We deliberately keep this small.
- */
 public record Shipment(
         ShipmentId id,
         String orderId,
         String shippingClass,
         int totalLineItemCount,
+        int estimatedDays,
         Instant scheduledAt
 ) {
     public Shipment {
@@ -28,8 +23,14 @@ public record Shipment(
     }
 
     public static Shipment schedule(String orderId, String shippingClass, int totalLineItemCount) {
+        int days = switch (shippingClass.toLowerCase()) {
+            case "overnight" -> 1;
+            case "express" -> 2;
+            case "priority" -> 3;
+            default -> 5;
+        };
         return new Shipment(
                 ShipmentId.generate(), orderId, shippingClass, totalLineItemCount,
-                Instant.now());
+                days, Instant.now());
     }
 }

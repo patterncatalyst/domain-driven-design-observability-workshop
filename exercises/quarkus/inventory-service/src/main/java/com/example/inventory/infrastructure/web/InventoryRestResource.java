@@ -17,16 +17,6 @@ import jakarta.ws.rs.core.MediaType;
 
 import java.util.List;
 
-/**
- * REST resource for stock reservation. Translates Order's wire shape into
- * {@link ReserveStockCommand}, calls the shared use case, translates the
- * resulting {@link Reservation} back to the wire shape.
- *
- * <p>Both this resource and the gRPC service ({@code InventoryGrpcService})
- * delegate into the same {@link ReserveStockUseCase} - the transport
- * choice doesn't change business behavior. Module 5 uses this parallelism
- * as the architectural payoff for the ACL discussion.
- */
 @Path("/api/inventory")
 public class InventoryRestResource {
 
@@ -47,27 +37,39 @@ public class InventoryRestResource {
     }
 
     private static ReserveStockCommand toCommand(ReserveRequestDto request) {
-        List<ReservationLine> lines = request.lineItems().stream()
-                .map(li -> new ReservationLine(
-                        ProductCode.of(li.productCode()),
-                        li.requestedQuantity()))
+        List<ReservationLine> lines = request.items().stream()
+                .map(item -> {
+                    String pc = item.sku().startsWith("SKU-")
+                            ? "PROD-" + item.sku().substring(4)
+                            : item.sku();
+                    return new ReservationLine(
+                            ProductCode.of(pc), item.quantity(), item.quantity(), true);
+                })
                 .toList();
-        return new ReserveStockCommand(
-                request.orderId(), request.customerId(), lines);
+        return new ReserveStockCommand(request.orderId(), "", lines);
     }
 
     private static ReserveResponseDto fromDomain(Reservation reservation) {
+        boolean isAvailable = reservation.status() == ReservationStatus.AVAILABLE;
+        List<ReserveResponseDto.LineDto> wireLines = reservation.lines().stream()
+                .map(line -> new ReserveResponseDto.LineDto(
+                        line.productCode().value(),
+                        isAvailable ? line.requestedQuantity() : 0,
+                        isAvailable))
+                .toList();
+
         return new ReserveResponseDto(
                 reservation.id().value(),
                 wireStatus(reservation.status()),
-                reservation.reason());
+                reservation.reason(),
+                wireLines);
     }
 
-    private static ReserveResponseDto.Status wireStatus(ReservationStatus status) {
+    private static String wireStatus(ReservationStatus status) {
         return switch (status) {
-            case AVAILABLE   -> ReserveResponseDto.Status.AVAILABLE;
-            case PARTIAL     -> ReserveResponseDto.Status.PARTIAL;
-            case UNAVAILABLE -> ReserveResponseDto.Status.UNAVAILABLE;
+            case AVAILABLE   -> "RESERVED";
+            case PARTIAL     -> "PARTIALLY_RESERVED";
+            case UNAVAILABLE -> "UNAVAILABLE";
         };
     }
 }

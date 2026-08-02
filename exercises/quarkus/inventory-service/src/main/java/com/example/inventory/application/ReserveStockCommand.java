@@ -19,7 +19,7 @@ public record ReserveStockCommand(
 ) {
     public ReserveStockCommand {
         Objects.requireNonNull(orderId, "orderId");
-        Objects.requireNonNull(customerId, "customerId");
+        if (customerId == null) customerId = "";
         Objects.requireNonNull(lines, "lines");
         if (lines.isEmpty()) {
             throw new IllegalArgumentException("lines must not be empty");
