@@ -134,116 +134,12 @@ function S() {
   const s = S();
   addContentTitle(s, "THE SCENARIO", "A checkout spanning 5 bounded contexts");
 
-  // Draw bounded context boxes and arrows using shapes and text
-  const boxH = 1.10;
-  const boxW = 2.20;
-  const boxY = 2.60;
-  const arrowColor = COLOR.caption;
-
-  // Order context (leftmost, slightly higher for visual hierarchy)
-  const orderX = 0.80;
-  const orderY = 3.20;
-  s.addShape("roundRect", {
-    x: orderX, y: orderY, w: boxW, h: boxH,
-    fill: { color: COLOR.tealLight },
-    line: { color: COLOR.teal, width: 2 },
-    rectRadius: 0.08,
-  });
-  s.addText([
-    { text: "Order", options: { fontSize: 18, bold: true, color: COLOR.ink, breakLine: true } },
-    { text: "(Saga Orchestrator)", options: { fontSize: 11, color: COLOR.caption } },
-  ], { x: orderX, y: orderY, w: boxW, h: boxH, align: "center", valign: "middle", fontFace: FONT.body });
-
-  // Inventory context
-  const invX = 4.20;
-  const invY = 2.30;
-  s.addShape("roundRect", {
-    x: invX, y: invY, w: boxW, h: boxH,
-    fill: { color: "F5F3FF" }, // violet-50
-    line: { color: "7C3AED", width: 2 },
-    rectRadius: 0.08,
-  });
-  s.addText([
-    { text: "Inventory", options: { fontSize: 18, bold: true, color: COLOR.ink, breakLine: true } },
-    { text: "(Stock Management)", options: { fontSize: 11, color: COLOR.caption } },
-  ], { x: invX, y: invY, w: boxW, h: boxH, align: "center", valign: "middle", fontFace: FONT.body });
-
-  // Payment context
-  const payX = 7.20;
-  const payY = 2.30;
-  s.addShape("roundRect", {
-    x: payX, y: payY, w: boxW, h: boxH,
-    fill: { color: "ECFDF5" }, // emerald-50
-    line: { color: "059669", width: 2 },
-    rectRadius: 0.08,
-  });
-  s.addText([
-    { text: "Payment", options: { fontSize: 18, bold: true, color: COLOR.ink, breakLine: true } },
-    { text: "(Authorization)", options: { fontSize: 11, color: COLOR.caption } },
-  ], { x: payX, y: payY, w: boxW, h: boxH, align: "center", valign: "middle", fontFace: FONT.body });
-
-  // Shipping context
-  const shipX = 10.20;
-  const shipY = 2.30;
-  s.addShape("roundRect", {
-    x: shipX, y: shipY, w: boxW, h: boxH,
-    fill: { color: "FFFBEB" }, // amber-50
-    line: { color: "D97706", width: 2 },
-    rectRadius: 0.08,
-  });
-  s.addText([
-    { text: "Shipping", options: { fontSize: 18, bold: true, color: COLOR.ink, breakLine: true } },
-    { text: "(Fulfillment)", options: { fontSize: 11, color: COLOR.caption } },
-  ], { x: shipX, y: shipY, w: boxW, h: boxH, align: "center", valign: "middle", fontFace: FONT.body });
-
-  // Notification context (below, connected via Kafka)
-  const notifX = 4.20;
-  const notifY = 4.60;
-  s.addShape("roundRect", {
-    x: notifX, y: notifY, w: boxW, h: boxH,
-    fill: { color: "FEF2F2" }, // red-50
-    line: { color: "DC2626", width: 2 },
-    rectRadius: 0.08,
-  });
-  s.addText([
-    { text: "Notification", options: { fontSize: 18, bold: true, color: COLOR.ink, breakLine: true } },
-    { text: "(via Kafka Events)", options: { fontSize: 11, color: COLOR.caption } },
-  ], { x: notifX, y: notifY, w: boxW, h: boxH, align: "center", valign: "middle", fontFace: FONT.body });
-
-  // Arrows: Order -> Inventory (right arrow, from order box right edge to inventory left edge)
-  // Using text arrows since pptxgenjs shape arrows are limited
-  s.addText("→", {
-    x: orderX + boxW, y: orderY - 0.20, w: invX - orderX - boxW, h: 0.50,
-    fontFace: FONT.body, fontSize: 28, color: arrowColor,
-    align: "center", valign: "middle",
-  });
-  // Inventory -> Payment
-  s.addText("→", {
-    x: invX + boxW, y: invY, w: payX - invX - boxW, h: boxH,
-    fontFace: FONT.body, fontSize: 28, color: arrowColor,
-    align: "center", valign: "middle",
-  });
-  // Payment -> Shipping
-  s.addText("→", {
-    x: payX + boxW, y: payY, w: shipX - payX - boxW, h: boxH,
-    fontFace: FONT.body, fontSize: 28, color: arrowColor,
-    align: "center", valign: "middle",
-  });
-  // Order -> Notification (down arrow)
-  s.addText("↓", {
-    x: orderX + 0.40, y: orderY + boxH, w: 1.40, h: notifY - orderY - boxH,
-    fontFace: FONT.body, fontSize: 28, color: arrowColor,
-    align: "center", valign: "middle",
-  });
-
-  // Flow labels
-  s.addText("REST", {
-    x: invX + boxW + 0.05, y: invY - 0.30, w: 0.80, h: 0.25,
-    fontFace: FONT.mono, fontSize: 9, color: COLOR.caption, align: "center", valign: "middle",
-  });
-  s.addText("Kafka", {
-    x: orderX - 0.10, y: orderY + boxH + 0.05, w: 1.00, h: 0.25,
-    fontFace: FONT.mono, fontSize: 9, color: COLOR.caption, align: "center", valign: "middle",
+  // Embed the pre-rendered bounded-context-map diagram as a PNG image
+  // Generated from assets/diagrams/bounded-context-map.svg via cairosvg
+  s.addImage({
+    path: "./bounded-context-map.png",
+    x: 0.80, y: 1.80, w: 11.70, h: 4.00,
+    sizing: { type: "contain", w: 11.70, h: 4.00 },
   });
 
   addCaption(s, "The Saga pattern orchestrates a checkout across five bounded contexts, each with its own observability.");

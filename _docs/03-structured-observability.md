@@ -18,13 +18,21 @@ By the end of this module you will be able to:
 
 ---
 
-## 3.1 Structured logging with domain context
+## Step 1 -- Browse DomainContext usage in CheckoutSaga
 
 Generic log lines like `Processing request...` are nearly useless in a distributed system. When five services handle one checkout, you need every log line to carry the identifiers that tie it back to a specific order, customer, and cart.
 
 The `DomainContext` pattern solves this. It is a scope manager that adds domain identifiers to every log line emitted within its scope -- and cleans them up when the scope ends.
 
-### How it works
+Open the CheckoutSaga file for your language:
+
+| Language | File path |
+|---|---|
+| Quarkus | `order-service/src/main/java/com/example/order/application/CheckoutSaga.java` |
+| Python | `order_service/application/checkout_saga.py` |
+| C# | `OrderService/Application/CheckoutSaga.cs` |
+
+Find the `checkout` method. Look for the `DomainContext.open(...)` / `with DomainContext(...)` / `new DomainContext(...)` block near the top. This is the scope that attaches domain identifiers to every log line emitted during the checkout, so every downstream log automatically carries `order.id`, `customer.id`, and `cart.id`.
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -84,7 +92,21 @@ _logger.LogInformation("Checkout starting");
 // DomainContext.Dispose() removes baggage entries and ends the logging scope
 ```
 
-### What the DomainContext does under the hood
+### Why this matters
+
+When you query Loki for `order.id = "ord_abc123"`, you get logs from **all five services** that handled that order -- because the context propagates via OTel baggage across HTTP calls and Kafka messages. Without `DomainContext`, you would need to correlate logs manually using trace IDs, which tells you *when* things happened but not *what domain entity* they happened to.
+
+---
+
+## Step 2 -- Browse DomainContext internals (optional deep dive)
+
+Open the DomainContext class to see how it works under the hood:
+
+| Language | File path |
+|---|---|
+| Quarkus | `shared-observability/src/main/java/com/example/workshop/observability/DomainContext.java` |
+| Python | `shared_observability/domain_context.py` |
+| C# | `SharedObservability/DomainContext.cs` |
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -157,17 +179,23 @@ public sealed class DomainContext : IDisposable
 }
 ```
 
-### Why this matters
-
-When you query Loki for `order.id = "ord_abc123"`, you get logs from **all five services** that handled that order -- because the context propagates via OTel baggage across HTTP calls and Kafka messages. Without `DomainContext`, you would need to correlate logs manually using trace IDs, which tells you *when* things happened but not *what domain entity* they happened to.
-
 ---
 
-## 3.2 Business metrics
+## Step 3 -- Browse the business metrics
 
 Auto-instrumented metrics tell you about HTTP status codes and response times. They cannot tell you "how many checkouts failed because of inventory issues?" or "what's the p95 checkout latency for gold-tier customers?"
 
-Custom business metrics bridge that gap. The checkout saga defines two:
+Custom business metrics bridge that gap. The checkout saga defines two.
+
+Open CheckoutSaga again (same file as Step 1):
+
+| Language | File path |
+|---|---|
+| Quarkus | `order-service/src/main/java/com/example/order/application/CheckoutSaga.java` |
+| Python | `order_service/application/checkout_saga.py` |
+| C# | `OrderService/Application/CheckoutSaga.cs` |
+
+Find the metric definitions near the top of the class -- a counter (`checkout_outcomes_total`) and a histogram/timer (`checkout_duration_seconds`). Then find the `recordOutcome` / `_record_outcome` / `RecordOutcome` helper method that records both metrics at the end of each checkout.
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -254,13 +282,23 @@ Notice the label discipline: `outcome` is a small enum (success, cancelled_inven
 
 ---
 
-## 3.3 The Anti-Corruption Layer
+## Step 4 -- Browse the ACL adapter
 
 When two bounded contexts have different vocabularies, the **Anti-Corruption Layer** (ACL) translates between them. This is a core DDD pattern from Eric Evans and Vlad Khononov: it prevents one context's model from leaking into another.
 
 In our system, the Order context talks about **SKUs** and **line items**. The Inventory context talks about **product codes** and **reservation lines**. The ACL sits in the Order service's infrastructure layer and translates between these vocabularies.
 
 {% include excalidraw.html file="acl-translation" alt="ACL vocabulary translation" caption="Order's Sku/LineItem translated to Inventory's ProductCode/ReservationLine at the ACL boundary" %}
+
+Open the inventory adapter for your language:
+
+| Language | File path |
+|---|---|
+| Quarkus | `order-service/src/main/java/com/example/order/infrastructure/inventory/InventoryRestAdapter.java` |
+| Python | `order_service/infrastructure/inventory_adapter.py` |
+| C# | `OrderService/Infrastructure/InventoryAdapter.cs` |
+
+Find the `reserve` method. Notice the three-phase structure: outbound translation (Order vocabulary to wire format), wire call (HTTP request), and inbound translation (wire response back to Order vocabulary). This is where drift dies -- if the Inventory service changes its contract, only this adapter breaks, not the domain model.
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -378,21 +416,72 @@ The span is named `Order.Acl.InventoryReserve` -- not `POST /api/inventory/reser
 
 ---
 
-## 3.4 Cross-signal correlation
+## Step 5 -- Run checkout and Newman tests
 
-The real power of structured observability is pivoting between the three signals:
+Try it: send a single checkout request through the system, then run the full validation suite.
 
-### Traces to logs
+First, run a single checkout so you have a known order to trace:
 
-Click "Logs for this span" in Tempo. Grafana queries Loki using the `trace_id` from the span, showing you every log line emitted during that span's execution -- with the domain context fields (`order.id`, `customer.id`) already present.
+```bash
+curl -s -X POST http://localhost:8080/api/orders/checkout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cartId": "cart_module3_001",
+    "customerId": "cust_carol_platinum",
+    "lineItems": [
+      {
+        "sku": "SKU-KEYBOARD-MX",
+        "quantity": 1,
+        "unitPrice": 149.99
+      }
+    ],
+    "paymentMethod": "credit_card",
+    "shippingClass": "express"
+  }' | python3 -m json.tool
+```
 
-### Metrics to traces
+Note the `orderId` in the response -- you will use it in the next step to find your trace and logs.
 
-Exemplars on metrics link to specific traces. When you see a spike in `checkout_outcomes_total{outcome="cancelled_inventory"}`, the exemplar on that data point links to one of the traces that contributed to it. Click the exemplar to jump directly into the trace view.
+Then run the Newman validation suite to generate a wider set of traffic (successful checkouts, inventory failures, different customer tiers):
 
-### Logs to traces
+```bash
+newman run tests/collections/03-domain-events-validation.json \
+  -e tests/environments/local.json
+```
 
-The `trace_id` field in structured logs is a clickable link in Grafana. From any log line, click the trace ID to open the full distributed trace in Tempo.
+---
+
+## Step 6 -- Explore Grafana: cross-signal correlation
+
+The real power of structured observability is pivoting between the three signals -- traces, logs, and metrics -- using domain identifiers as the thread that connects them.
+
+### 6a. Check the business metrics dashboard
+
+1. Open **Grafana** at `http://localhost:3000`.
+2. Navigate to **Dashboards** and open the **Checkout Saga** dashboard.
+3. Look for the `checkout_outcomes_total` counter and `checkout_duration_seconds` histogram panels. You should see per-tier and per-outcome breakdowns from the traffic you generated in Step 5.
+
+### 6b. Trace to logs -- follow a single checkout
+
+4. Navigate to **Explore > Tempo**. Find the trace from your checkout (search by the `order.id` you noted in Step 5, or browse recent traces).
+5. Click on the `Order.Checkout` span. Verify the business attributes are present: `order.id`, `customer.tier`, `order.value`.
+6. From the trace view, click **Logs for this span**. Grafana queries Loki using the `trace_id` from the span and shows every structured log line emitted during that span's execution -- with the domain context fields (`order.id`, `customer.id`) already present. This is the traces-to-logs pivot.
+
+### 6c. Metrics to traces -- follow a spike
+
+7. Back on the **Checkout Saga** dashboard, look for an exemplar dot on one of the metric panels. Exemplars on metrics link to specific traces. When you see a spike in `checkout_outcomes_total{outcome="cancelled_inventory"}`, the exemplar on that data point links to one of the traces that contributed to it. Click the exemplar to jump directly into the trace view.
+
+### 6d. Logs to traces -- follow an order ID
+
+8. Navigate to **Explore > Loki**. Run the following query (replace the order ID with the one from your checkout in Step 5):
+
+   ```
+   {service_namespace="workshop"} | json | order_id="ord_xxx"
+   ```
+
+   You will see logs from all five services that handled that order -- because the `DomainContext` propagated the identifiers via OTel baggage across HTTP calls and Kafka messages.
+
+9. The `trace_id` field in each structured log line is a clickable link. Click the trace ID on any log line to open the full distributed trace in Tempo. This is the logs-to-traces pivot.
 
 ### All three together
 
@@ -402,24 +491,6 @@ The three signals form a triangle. You can enter from any vertex:
 - **Click an exemplar** to jump to a specific trace
 - **Click "Logs"** on a span to see the structured log lines with domain context
 - **The domain identifiers** (`order.id`, `customer.tier`) are the same across all three
-
----
-
-## 3.5 Observe: the full picture
-
-Run the validation tests to generate traffic:
-
-```bash
-newman run tests/collections/03-domain-events-validation.json \
-  -e tests/environments/local.json
-```
-
-Then open Grafana and verify:
-
-1. **Checkout Saga dashboard** -- business metrics appear with per-tier and per-outcome breakdowns
-2. **Click a metric exemplar** -- jump to the trace that produced it
-3. **From the trace, click "Logs"** -- see structured logs with `order.id`, `customer.id`, and `customer.tier`
-4. **All three signals are connected** through a single order's identifiers
 
 ---
 

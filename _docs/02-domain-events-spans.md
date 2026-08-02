@@ -18,17 +18,21 @@ By the end of this module you will:
 
 ---
 
-## 1. From Generic to Domain-Named Spans
+**Step 1: Browse domain-named spans in use cases**
 
 In Module 1 we saw that auto-instrumented spans are named after HTTP verbs and paths: `HTTP POST /api/orders/checkout`, `HTTP POST /api/payments/authorize`. These names describe the transport, not the business operation. When you are paged at 2 AM and staring at a trace, you want to see `Order.Checkout` and `Payment.Authorize`, not `HTTP POST`.
 
 The fix is simple: create a span in the use case layer and give it a domain-meaningful name. Each language has its own idiom for this, but the span name is always the same.
 
-Open the `AuthorizePaymentUseCase` in your language:
+Open the file for your language:
 
-- **Quarkus:** `payment-service/src/main/java/com/example/payment/application/AuthorizePaymentUseCase.java`
-- **Python:** `payment_service/application/authorize_payment.py`
-- **C#:** `PaymentService/Application/AuthorizePaymentUseCase.cs`
+| Language | File |
+|----------|------|
+| Quarkus | `payment-service/src/main/java/com/example/payment/application/AuthorizePaymentUseCase.java` |
+| Python | `payment_service/application/authorize_payment.py` |
+| C# | `PaymentService/Application/AuthorizePaymentUseCase.cs` |
+
+Find the `authorize` method. Notice the span is created with a domain name `Payment.Authorize` instead of a generic HTTP span:
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -153,7 +157,7 @@ Three different OTel APIs, three different languages -- but the span is always c
 
 ---
 
-## 2. Business Attributes on Spans
+**Step 2: Browse span attributes**
 
 Adding `span.setAttribute("order.id", orderId)` may seem small, but it unlocks powerful queries. In Grafana's Tempo, you can now search for all traces involving a specific order:
 
@@ -175,7 +179,17 @@ Or find all declined payments:
 
 Without these attributes, you would need to grep through logs or scan traces manually. With them, Tempo becomes a domain-aware search engine.
 
-The checkout saga in the Order service sets attributes at a higher level -- the saga span carries the overall order context:
+The checkout saga in the Order service sets attributes at a higher level -- the saga span carries the overall order context.
+
+Open the file for your language:
+
+| Language | File |
+|----------|------|
+| Quarkus | `order-service/src/main/java/com/example/order/application/CheckoutSaga.java` |
+| Python | `order_service/application/checkout_saga.py` |
+| C# | `OrderService/Application/CheckoutSaga.cs` |
+
+Find the `checkout` method. Notice how business attributes are set on the span:
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -272,7 +286,7 @@ Notice the `BaggageHelpers.put()` / `set_baggage()` / `BaggageHelpers.Set()` cal
 
 ---
 
-## 3. Domain Events
+**Step 3: Browse domain events**
 
 Domain events are things that happened in the domain that other parts of the system care about. In our checkout flow, the Order context publishes three events:
 
@@ -281,6 +295,16 @@ Domain events are things that happened in the domain that other parts of the sys
 - **OrderCancelled** -- a saga step failed, the order is cancelled (carries `failedAt` and `reason`)
 
 Each event carries enough business data to be useful on its own -- the consumer does not need to call back to the Order service for context.
+
+Open the file for your language:
+
+| Language | File |
+|----------|------|
+| Quarkus | `order-service/src/main/java/com/example/order/domain/event/OrderPlaced.java` |
+| Python | `order_service/domain/events.py` |
+| C# | `OrderService/Domain/Events.cs` |
+
+Open the `OrderPlaced` event class. Notice how it carries enough business data to be useful standalone:
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -396,9 +420,19 @@ Domain events are natural span boundaries. When the saga publishes `OrderPlaced`
 
 ---
 
-## 4. The Value Object Pattern
+**Step 4: Browse value objects**
 
-Every domain identifier in this workshop is a value object -- a small, immutable type that wraps a primitive and adds meaning. The `AuthorizationId` is a good example:
+Every domain identifier in this workshop is a value object -- a small, immutable type that wraps a primitive and adds meaning. The `AuthorizationId` is a good example.
+
+Open the file for your language:
+
+| Language | File |
+|----------|------|
+| Quarkus | `payment-service/src/main/java/com/example/payment/domain/model/AuthorizationId.java` |
+| Python | `payment_service/domain/models.py` |
+| C# | `PaymentService/Domain/Models/AuthorizationId.cs` |
+
+Open the `AuthorizationId` class. Notice the prefix pattern and the `generate` factory method:
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -472,9 +506,11 @@ When these identifiers appear as span attributes (`span.setAttribute("authorizat
 
 ---
 
-## 5. Observe: Domain-Named Traces
+**Step 5: Run a checkout and observe the trace**
 
-Now let's see the difference. Run a checkout request (or use the Newman collection):
+Now let's see the difference.
+
+**Try it:** Run a checkout request to generate a domain-named trace:
 
 ```bash
 curl -s -X POST http://localhost:8080/api/orders/checkout \
@@ -532,7 +568,7 @@ Click on any span to see the business attributes. The `Payment.Authorize` span n
 
 ---
 
-## 6. Key Takeaways
+**Step 6: Key Takeaways**
 
 - **Span names should reflect domain operations, not HTTP verbs.** `"Payment.Authorize"` tells you what happened; `"HTTP POST"` tells you how it was transported.
 - **Business attributes answer business questions from traces.** `order.id`, `customer.tier`, `authorization.outcome` make Tempo a domain-aware search engine.

@@ -18,7 +18,9 @@ By the end of this module you will be able to:
 
 ---
 
-## 5.1 The cost of observability
+## Step 1: Understand the cost
+
+Before we start optimizing, let's understand the scale of the problem.
 
 Every span, metric series, and log line costs storage and compute. Consider the math for our workshop:
 
@@ -31,9 +33,11 @@ Full-fidelity retention of every trace is expensive. The question is not *whethe
 
 ---
 
-## 5.2 Sampling strategies
+## Step 2: Browse the OTel Collector configuration
 
-### Head sampling
+### Head sampling vs tail sampling
+
+Before we look at the config, understand the two sampling approaches:
 
 **Head sampling** decides at the start of a trace whether to keep it. The decision is made probabilistically (e.g., "keep 10% of traces") and propagated to all downstream services via the `traceparent` header's sampled bit.
 
@@ -41,11 +45,21 @@ Full-fidelity retention of every trace is expensive. The question is not *whethe
 
 **Disadvantage**: the decision is random. A 10% sample rate means you lose 90% of error traces too. For high-volume happy paths this is fine. For low-volume failures, this is unacceptable.
 
-### Tail sampling
-
 **Tail sampling** waits for the entire trace to complete before deciding. The OpenTelemetry Collector buffers all spans, sees the full picture, and then applies policies like "keep all error traces, keep all slow traces, sample 10% of the rest."
 
-Here is the tail sampling processor from the workshop's OTel Collector configuration:
+**Advantages**: keeps every error trace and every slow trace. The debugging experience for failures is unchanged.
+
+**Disadvantage**: the Collector must buffer all in-flight traces for `decision_wait` seconds. That is RAM proportional to throughput multiplied by decision wait multiplied by average trace size. The `num_traces: 50000` setting caps the buffer -- plan capacity for production accordingly.
+
+### Review the tail sampling processor
+
+Open `infrastructure/otel-collector/config.yaml`.
+
+Find the `tail_sampling` processor definition (around line 54). Review the three policies:
+
+1. **`errors`** -- always keep traces with errors
+2. **`slow`** -- always keep traces with latency > 1 second
+3. **`random_sample`** -- keep 10% of everything else
 
 ```yaml
 # infrastructure/otel-collector/config.yaml
@@ -72,13 +86,9 @@ processors:
           sampling_percentage: 10
 ```
 
-**Advantages**: keeps every error trace and every slow trace. The debugging experience for failures is unchanged.
+### Find the active pipeline
 
-**Disadvantage**: the Collector must buffer all in-flight traces for `decision_wait` seconds. That is RAM proportional to throughput multiplied by decision wait multiplied by average trace size. The `num_traces: 50000` setting caps the buffer -- plan capacity for production accordingly.
-
-### Activating tail sampling
-
-The workshop's Collector config has the `tail_sampling` processor defined but not wired into the active pipeline. To activate it, swap the processors line:
+Now find the `traces` pipeline under `service: > pipelines:` (around line 109). Notice that the active processors line is `[memory_limiter, resource, batch]` -- tail sampling is **not** wired in yet.
 
 ```yaml
 service:
@@ -94,7 +104,31 @@ service:
 
 ---
 
-## 5.3 Cardinality discipline
+## Step 3: Activate tail sampling
+
+To activate tail sampling, edit `infrastructure/otel-collector/config.yaml`.
+
+Find the `traces` pipeline (around line 109-114). Comment out the current processors line and uncomment the tail sampling line:
+
+```yaml
+# BEFORE:
+    processors: [memory_limiter, resource, batch]
+    # processors: [memory_limiter, resource, tail_sampling, batch]
+
+# AFTER:
+    # processors: [memory_limiter, resource, batch]
+    processors: [memory_limiter, resource, tail_sampling, batch]
+```
+
+Then restart the OTel Collector to pick up the change:
+
+```bash
+docker compose restart otel-collector
+```
+
+---
+
+## Step 4: Review cardinality discipline
 
 **Cardinality** is the number of unique time series a metric produces. Every unique combination of label values creates a new time series. Unbounded labels create unbounded series, which exhausts your metrics backend.
 
@@ -123,26 +157,30 @@ Our workshop metrics keep cardinality bounded by design:
 
 ---
 
-## 5.4 The cost dashboard
+## Step 5: Run traffic and observe the cost dashboard
 
-Open the **Observability Cost** dashboard in Grafana. Three panels show the cost of your observability pipeline:
-
-- **Span volume through Collector** -- `otelcol_receiver_accepted_spans_total` rate, plus any dropped spans
-- **Collector memory** -- `otelcol_process_runtime_total_alloc_bytes` and total system memory
-- **Export rate by signal** -- spans, metrics, and log records sent to Tempo, Prometheus, and Loki
-
-Run some traffic and watch the numbers:
+**Try it:** Generate some traffic to see the cost difference:
 
 ```bash
 newman run tests/collections/01-checkout-happy-path.json \
   -e tests/environments/local.json
 ```
 
+Run it several times to build up enough data.
+
+Open the **Observability Cost** dashboard in Grafana (`http://localhost:3000` > **Dashboards** > **Observability Cost**).
+
+Look at three panels:
+
+1. **Span volume through Collector** -- `otelcol_receiver_accepted_spans_total` rate, plus any dropped spans
+2. **Collector memory** -- shows the tail sampling buffer's memory impact
+3. **Export rate by signal** -- compare the export rate now (with tail sampling) vs before
+
 A subtlety: some of these numbers include **observability about observability**. The Collector scrapes its own internal metrics on `:8888`, and Tempo's metrics generator emits service-graph and span-metrics back into the pipeline. Part of the load you are watching is the system observing itself. That is normal -- and it is a real production cost too.
 
 ---
 
-## 5.5 Key takeaways
+## Step 6: Key takeaways
 
 **Sample intelligently**. Keep error traces and slow traces at 100%. Sample the happy path aggressively. This gives you the best cost-to-fidelity ratio.
 

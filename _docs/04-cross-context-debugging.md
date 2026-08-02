@@ -29,7 +29,7 @@ This is a realistic production scenario: a regression that does not break functi
 
 ## 4.2 Investigation: dashboard anomaly
 
-Open the **Checkout Saga** dashboard in Grafana (`http://localhost:3000`).
+Open **Grafana** at `http://localhost:3000`. Navigate to **Dashboards** in the left sidebar and open the **Checkout Saga** dashboard.
 
 Two panels show tier breakdowns:
 
@@ -44,9 +44,9 @@ The Order-to-Notification path goes through Kafka. So either Order is not puttin
 
 ## 4.3 Investigation: trace inspection
 
-Open Grafana, navigate to **Explore**, and select **Tempo** as the data source.
+In Grafana, navigate to **Explore** (compass icon in the left sidebar) and select **Tempo** as the data source from the dropdown at the top. Click **Search** and look for recent traces -- you should see checkout traces from your earlier test runs. Click on a trace to open the trace tree.
 
-Search for a recent checkout trace. In the trace tree, walk through the spans:
+Walk through the spans and note the `customer.tier` attribute on each one:
 
 | Span | `customer.tier` value |
 |---|---|
@@ -63,15 +63,21 @@ Search for a recent checkout trace. In the trace tree, walk through the spans:
 
 The break happens at the Kafka boundary. Every synchronous HTTP span carries the correct tier via OTel baggage. But the Notification service's Kafka consumer shows `unknown`.
 
+The diagram below shows how OTel context flows through the pipeline -- notice how the Kafka boundary is the only place where manual extraction is required.
+
+{% include excalidraw.html file="otel-pipeline" alt="OpenTelemetry pipeline" caption="The OTel Collector sits between services and backends, propagating trace context across all transports" %}
+
 ---
 
 ## 4.4 Investigation: log correlation
 
-Open **Explore** with Loki as the data source. Take the `order.id` from the trace and query:
+Switch to **Explore > Loki** (change the data source dropdown from Tempo to **Loki**). Take the `order.id` value from the trace you just examined (e.g., `ord_a1b2c3d4...`) and run this query:
 
 ```logql
 {service_namespace="workshop"} | json | order_id="ord_xxx"
 ```
+
+Replace `ord_xxx` with the actual order ID from your trace.
 
 Walk through the log lines in timestamp order:
 
@@ -87,9 +93,15 @@ The pattern is clear. Every service that communicates synchronously (via HTTP) r
 
 ## 4.5 The root cause
 
-The bug is in the Notification service's Kafka consumer -- the line where `customer.tier` should be read from OTel baggage. On the broken branch, this read was replaced with a hardcoded `"unknown"`.
+Now that you know the bug is in the Notification service's Kafka consumer, open the file for your language:
 
-Here is where the bug lives in each language:
+| Language | File |
+|----------|------|
+| Quarkus | `notification-service/src/main/java/com/example/notification/infrastructure/kafka/OrderEventConsumer.java` |
+| Python | `notification_service/infrastructure/kafka_consumer.py` |
+| C# | `NotificationService/Infrastructure/KafkaConsumer.cs` |
+
+Find the line where `customer.tier` is read. On the `cp-4-broken` branch, it looks like this:
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
@@ -129,6 +141,14 @@ _useCase.Send(orderEvent, customerTier);                 // metrics get tier=unk
 ---
 
 ## 4.6 The fix
+
+In the same file you opened in the previous step, replace the hardcoded line with the correct version that reads from OTel baggage.
+
+Find and replace the broken line in your language:
+
+- **Quarkus:** Find `String customerTier = "unknown";` and replace it with the baggage read shown below.
+- **Python:** Find `customer_tier = "unknown"` and replace it with the baggage read shown below.
+- **C#:** Find `var customerTier = "unknown";` and replace it with the baggage read shown below.
 
 The correct version reads `customer.tier` from OTel baggage, which was propagated from the Order service through the Kafka message headers:
 
@@ -186,6 +206,8 @@ The key insight: at **async boundaries** like Kafka, OTel context does not propa
 ---
 
 ## 4.7 Verify the fix
+
+Restart the notification service to pick up your code change. If you are running locally with a file watcher (e.g., Quarkus dev mode, Python with `--reload`, or `dotnet watch`), the service should auto-restart. Otherwise, stop and restart it manually.
 
 Run the validation tests:
 
