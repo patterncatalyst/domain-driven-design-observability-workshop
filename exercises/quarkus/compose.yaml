@@ -10,7 +10,9 @@ include:
 services:
 
   order-service:
-    build: ./order-service
+    build:
+      context: .
+      dockerfile: order-service/Dockerfile
     container_name: workshop-order
     ports:
       - "8080:8080"
@@ -18,11 +20,11 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_SERVICE_NAME: order-service
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
-      INVENTORY_REST_URL: http://inventory-service:8081
-      PAYMENT_REST_URL: http://payment-service:8082
-      SHIPPING_REST_URL: http://shipping-service:8083
-      INVENTORY_GRPC_HOST: inventory-service
-      INVENTORY_GRPC_PORT: 9001
+      QUARKUS_REST_CLIENT_INVENTORY_REST_URL: http://inventory-service:8081
+      QUARKUS_REST_CLIENT_PAYMENT_REST_URL: http://payment-service:8082
+      QUARKUS_REST_CLIENT_SHIPPING_REST_URL: http://shipping-service:8083
+      QUARKUS_GRPC_CLIENTS_INVENTORY_HOST: inventory-service
+      QUARKUS_GRPC_CLIENTS_INVENTORY_PORT: 9001
     depends_on:
       kafka:
         condition: service_healthy
@@ -42,7 +44,9 @@ services:
       - workshop
 
   inventory-service:
-    build: ./inventory-service
+    build:
+      context: .
+      dockerfile: inventory-service/Dockerfile
     container_name: workshop-inventory
     ports:
       - "8081:8081"
@@ -61,7 +65,9 @@ services:
       - workshop
 
   payment-service:
-    build: ./payment-service
+    build:
+      context: .
+      dockerfile: payment-service/Dockerfile
     container_name: workshop-payment
     ports:
       - "8082:8082"
@@ -79,7 +85,9 @@ services:
       - workshop
 
   shipping-service:
-    build: ./shipping-service
+    build:
+      context: .
+      dockerfile: shipping-service/Dockerfile
     container_name: workshop-shipping
     ports:
       - "8083:8083"
@@ -97,7 +105,9 @@ services:
       - workshop
 
   notification-service:
-    build: ./notification-service
+    build:
+      context: .
+      dockerfile: notification-service/Dockerfile
     container_name: workshop-notification
     ports:
       - "8084:8084"
