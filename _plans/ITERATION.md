@@ -218,6 +218,34 @@ Complete C# implementation. Write tutorial content with all three languages in c
 
 **Acceptance:** All tutorial pages render correctly with codetabs showing Quarkus, Python, and C# code. Navigation works. All links resolve.
 
+#### W3.3 — Diagrams via /lgtm-diagram-generator (Aug 22, 1 day)
+- [ ] Generate SVG + Excalidraw pairs for all architecture diagrams:
+  - E-commerce bounded context map (5 contexts with relationships)
+  - Checkout saga flow (Order → Inventory → Payment → Shipping → Notification)
+  - OTel pipeline architecture (Services → Collector → Tempo/Prometheus/Loki → Grafana)
+  - ACL translation diagram (Order vocabulary ↔ Inventory vocabulary)
+  - Trace flow comparison (before: generic spans → after: domain-named spans)
+  - Three-layer DDD structure (domain/application/infrastructure)
+- [ ] Embed diagrams in tutorial pages using {% include excalidraw.html %}
+- [ ] Store sources in assets/diagrams/*.excalidraw, rendered in assets/diagrams/*.svg
+
+**Acceptance:** All diagrams render on the site with consistent styling. Excalidraw sources committed for future editing.
+
+#### W3.4 — Per-Language README Documents (Aug 22, 1 day)
+- [ ] Create exercises/quarkus/README.md — standalone guide for the Quarkus implementation:
+  - Project overview and architecture
+  - Prerequisites (JDK 25, Maven)
+  - How to build and run (compose up + mvnw)
+  - Service descriptions (ports, endpoints, domain model)
+  - How to run tests (Newman collections)
+  - How to explore in Grafana
+  - Code structure walkthrough (DDD layers per service)
+- [ ] Create exercises/python/README.md — same structure for Python/FastAPI
+- [ ] Create exercises/dotnet/README.md — same structure for C#/.NET 10
+- [ ] Create exercises/README.md — top-level guide explaining the multi-language approach and how to choose
+
+**Acceptance:** A participant who clones the repo and opens exercises/python/ (for example) can follow the README alone without opening the tutorial site.
+
 ---
 
 ## Week 4: Polish + Ship (Aug 25-29)

@@ -459,20 +459,30 @@ Selected Newman tests include assertions that verify:
 ## 17. Deliverables Checklist
 
 ### Content
-- [ ] Tutorial site (Jekyll, GitHub Pages) with all 6 modules + 2 addendums
+- [x] Tutorial site (Jekyll, GitHub Pages) with all 6 modules + 2 addendums
 - [ ] Code tabs for all three languages in every code block
-- [ ] Architecture diagrams (Excalidraw → SVG)
+- [ ] Architecture diagrams via /lgtm-diagram-generator (SVG + Excalidraw pairs)
+  - E-commerce bounded context map
+  - Checkout saga flow
+  - OTel pipeline architecture
+  - ACL translation diagram
+  - Trace flow comparison (before/after domain naming)
+  - Three-layer DDD structure
 - [ ] Screenshots for key Grafana views
 - [ ] 10-slide presentation deck
 
 ### Code
-- [ ] Quarkus implementation (5 services + shared module) — EXISTS, needs audit
-- [ ] Python/FastAPI implementation (5 services)
-- [ ] .NET 10/C# implementation (5 services)
-- [ ] Shared observability stack (Docker Compose fragments)
-- [ ] Newman/Postman test collections (per module)
-- [ ] verify.sh (language-agnostic validation)
-- [ ] Grafana dashboards (5 pre-provisioned)
+- [x] Quarkus implementation (5 services + shared module)
+- [x] Python/FastAPI implementation (5 services)
+- [x] .NET 10/C# implementation (5 services)
+- [x] Shared observability stack (Docker Compose fragments)
+- [x] Newman/Postman test collections (6 collections)
+- [x] verify.sh (language-agnostic validation)
+- [x] Grafana dashboards (5 pre-provisioned)
+
+### Documentation
+- [ ] Per-language README documents (exercises/quarkus/README.md, exercises/python/README.md, exercises/dotnet/README.md) — standalone guides so participants can use the code without the tutorial site
+- [ ] Top-level exercises/README.md explaining the multi-language approach
 
 ### Infrastructure
 - [ ] Devcontainer configs (one per language)
