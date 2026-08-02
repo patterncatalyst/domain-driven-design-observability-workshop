@@ -45,9 +45,24 @@ async def liveness():
 
 
 # ---------------------------------------------------------------------------
-# Service routes - to be implemented during workshop modules
+# Service routes
 # ---------------------------------------------------------------------------
-# POST /api/orders/checkout  (Module 1 - Deliverable #3)
+from infrastructure.routes import router  # noqa: E402
+
+app.include_router(router)
+
+
+# ---------------------------------------------------------------------------
+# Lifecycle hooks
+# ---------------------------------------------------------------------------
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Flush Kafka producer on shutdown to avoid message loss."""
+    from infrastructure.routes import _kafka_publisher
+
+    _kafka_publisher.flush(timeout=5.0)
 
 
 # ---------------------------------------------------------------------------
