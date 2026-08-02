@@ -24,6 +24,8 @@ This workshop teaches you to build **observable domain-driven services** -- micr
 
 The scenario is a simplified checkout flow. A single POST request triggers a saga that crosses five bounded contexts: **Order** places the order and orchestrates the flow, **Inventory** reserves stock, **Payment** authorizes a charge, **Shipping** schedules delivery, and **Notification** sends confirmations asynchronously via Kafka. Each context is its own service, its own deployable, its own domain model.
 
+{% include excalidraw.html file="checkout-saga-flow" alt="Checkout saga flow" caption="The checkout saga orchestrates Inventory → Payment → Shipping synchronously, then publishes events to Notification via Kafka" %}
+
 You will work through seven modules. Each module builds on the previous one, and every concept is demonstrated in three languages simultaneously -- Java/Quarkus, Python/FastAPI, and C#/.NET -- so you can follow along in whichever stack you are most comfortable with.
 
 ---

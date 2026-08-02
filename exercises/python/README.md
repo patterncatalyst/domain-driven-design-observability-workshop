@@ -1,12 +1,12 @@
 # Python Implementation -- DDD + OpenTelemetry Workshop
 
 Five microservices implementing a DDD e-commerce checkout saga with full
-OpenTelemetry observability. Built on FastAPI, Python 3.14, frozen dataclasses,
+OpenTelemetry observability. Built on FastAPI, Python 3.12, frozen dataclasses,
 Protocol-based ports, and structlog.
 
 ## Prerequisites
 
-- **Python 3.14** (required by `pyproject.toml`)
+- **Python 3.12+** (Docker images use UBI 9 Python 3.12)
 - **Docker** and **Docker Compose** (for the full stack)
 - **Newman** (`npm install -g newman`) for API tests
 
@@ -103,8 +103,8 @@ exercises/python/
 ├── pyproject.toml                       # Project config (Python >=3.14, Ruff)
 ├── compose.yaml                         # 5 services + 7 infrastructure includes
 │
-├── shared_observability/                # Installable package
-│   ├── pyproject.toml
+├── shared_observability/                # Shared observability helpers
+│   ├── __init__.py                     # Package exports
 │   ├── domain_identifier.py            # Protocol: key() + value()
 │   ├── domain_context.py               # structlog contextvars scope manager
 │   ├── baggage_helpers.py              # OTel Baggage set/get wrappers
@@ -283,10 +283,8 @@ Run individual services outside Docker for faster iteration:
 # Start only infrastructure
 docker compose up -d kafka postgres otel-collector tempo prometheus loki grafana
 
-# Install the shared observability package
-pip install -e shared_observability/
-
-# Install a service's dependencies
+# Install a service's dependencies (shared_observability is on PYTHONPATH automatically)
+export PYTHONPATH=$PWD
 pip install -r order_service/requirements.txt
 
 # Run a service with uvicorn (hot reload)

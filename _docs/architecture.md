@@ -5,57 +5,15 @@ description: "The workshop domain model and infrastructure stack."
 label: "Reference"
 ---
 
-## Diagrams
+This page is a reference for the workshop's domain model, service architecture, observability pipeline, and naming conventions. Use it to orient yourself or to look up a port number, span name, or context relationship during the exercises.
+
+## System architecture
 
 {% include excalidraw.html file="bounded-context-map" alt="E-commerce bounded context map" caption="Five bounded contexts and their integration relationships" %}
 
 {% include excalidraw.html file="checkout-saga-flow" alt="Checkout saga orchestration flow" caption="Sequential saga: Inventory → Payment → Shipping, then async Notification via Kafka" %}
 
-{% include excalidraw.html file="otel-pipeline" alt="OpenTelemetry pipeline architecture" caption="OTLP from services → Collector → Tempo/Prometheus/Loki → Grafana" %}
-
 {% include excalidraw.html file="ddd-three-layers" alt="Hexagonal architecture layers" caption="Domain (pure) → Application (use cases) → Infrastructure (adapters)" %}
-
-## System architecture
-
-```
-                        ┌─────────────────────────────────────────────────────────────┐
-                        │                    Docker Compose Stack                       │
-                        │                                                              │
-  ┌──────────┐  HTTP    │  ┌──────────────┐  HTTP   ┌───────────────────┐              │
-  │  Newman  │─────────────│ Order Service │────────│ Inventory Service │              │
-  │  (test)  │          │  │   :8080       │        │     :8081         │              │
-  └──────────┘          │  │              │         └───────────────────┘              │
-                        │  │   Saga       │  HTTP   ┌───────────────────┐              │
-                        │  │  Orchestrator│────────│  Payment Service  │              │
-                        │  │              │        │     :8082         │              │
-                        │  │              │         └───────────────────┘              │
-                        │  │              │  HTTP   ┌───────────────────┐              │
-                        │  │              │────────│ Shipping Service  │              │
-                        │  │              │        │     :8083         │              │
-                        │  │              │         └───────────────────┘              │
-                        │  │              │                                            │
-                        │  │              │  Kafka  ┌───────────────────┐              │
-                        │  │              │────────│Notification Svc   │              │
-                        │  └──────────────┘        │     :8084         │              │
-                        │         │                 └───────────────────┘              │
-                        │         │ OTLP                      │ OTLP                   │
-                        │         ▼                           ▼                        │
-                        │  ┌──────────────────────────────────────────┐                │
-                        │  │         OTel Collector :4317/:4318       │                │
-                        │  └────────┬──────────────┬────────┬────────┘                │
-                        │           │              │        │                          │
-                        │     ┌─────▼─────┐  ┌─────▼─────┐  ┌──▼───┐                  │
-                        │     │  Tempo    │  │Prometheus │  │ Loki │                  │
-                        │     │  :3200   │  │  :9090   │  │:3100 │                  │
-                        │     └─────┬─────┘  └─────┬─────┘  └──┬───┘                  │
-                        │           │              │           │                       │
-                        │           └──────────────┼───────────┘                       │
-                        │                    ┌─────▼─────┐                             │
-                        │                    │  Grafana  │                             │
-                        │                    │  :3000   │                             │
-                        │                    └───────────┘                             │
-                        └─────────────────────────────────────────────────────────────┘
-```
 
 ---
 
@@ -96,13 +54,7 @@ Dependencies flow **inward**: Infrastructure depends on Application, Application
 
 ## Observability pipeline
 
-```
-Services (OTLP) ──► OTel Collector ──┬──► Tempo (traces)
-                                     ├──► Prometheus (metrics)
-                                     └──► Loki (logs)
-                                              │
-                                     Grafana ◄─┘ (dashboards, explore)
-```
+{% include excalidraw.html file="otel-pipeline" alt="OpenTelemetry pipeline architecture" caption="OTLP from services → Collector → Tempo/Prometheus/Loki → Grafana" %}
 
 | Signal | Flow | Storage | Query |
 |---|---|---|---|
@@ -118,11 +70,11 @@ Services (OTLP) ──► OTel Collector ──┬──► Tempo (traces)
 
 | Service | Port | Health check |
 |---|---|---|
-| order-service | 8080 | `GET /health` |
-| inventory-service | 8081 | `GET /health` |
-| payment-service | 8082 | `GET /health` |
-| shipping-service | 8083 | `GET /health` |
-| notification-service | 8084 | `GET /health` |
+| order-service | 8080 | `GET /q/health/ready` |
+| inventory-service | 8081 | `GET /q/health/ready` |
+| payment-service | 8082 | `GET /q/health/ready` |
+| shipping-service | 8083 | `GET /q/health/ready` |
+| notification-service | 8084 | `GET /q/health/ready` |
 
 ### Infrastructure
 

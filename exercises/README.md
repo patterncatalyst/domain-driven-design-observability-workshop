@@ -9,11 +9,11 @@ contract, same observability output, different language idioms.
 | | Quarkus | Python | C# |
 |--|---------|--------|----|
 | **Framework** | Quarkus 3.33 | FastAPI | ASP.NET Minimal APIs |
-| **Runtime** | JDK 25 | Python 3.14 | .NET 10 |
+| **Runtime** | JDK 25 | Python 3.12 | .NET 10 |
 | **OTel integration** | Micrometer + OTel bridge | opentelemetry-sdk | System.Diagnostics + OTel |
 | **Kafka client** | SmallRye Reactive Messaging | confluent-kafka | Confluent.Kafka |
 | **Build tool** | Maven (`mvnw`) | pip | `dotnet build` |
-| **Base image** | UBI 9 OpenJDK 25 | UBI 10 Python 3.14 | `dotnet/aspnet:10.0` |
+| **Base image** | UBI 10 OpenJDK 25 | UBI 9 Python 3.12 | `dotnet/aspnet:10.0` |
 
 Pick a language and follow the README in that directory:
 
