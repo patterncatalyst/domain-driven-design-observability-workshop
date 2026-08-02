@@ -1,0 +1,209 @@
+{
+  "info": {
+    "name": "03 - Domain Events Validation",
+    "description": "Validates that a successful checkout produces distributed traces, structured logs, and business metrics visible in the observability stack.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Generate Traffic",
+      "item": [
+        {
+          "name": "POST checkout - generate trace data",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_test_trace_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 1, \"unitPrice\": 29.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout succeeds for trace generation', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// Store orderId for potential downstream use",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.orderId) {",
+                  "    pm.collectionVariables.set('lastOrderId', jsonData.orderId);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Wait for async processing",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8080/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Wait 2 seconds for Kafka consumers and notification processing",
+                  "setTimeout(function () {}, 2000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Service still healthy after processing delay', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Observability Queries",
+      "item": [
+        {
+          "name": "Query Tempo for traces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:3200/api/search?service.name=order-service&limit=1",
+              "host": ["{{baseUrl}}"],
+              "port": "3200",
+              "path": ["api", "search"],
+              "query": [
+                { "key": "service.name", "value": "order-service" },
+                { "key": "limit", "value": "1" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Tempo returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Traces exist for order-service', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.traces).to.be.an('array');",
+                  "    pm.expect(jsonData.traces.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Query Loki for logs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:3100/loki/api/v1/query_range?query={service_namespace=\"workshop\"}&limit=5",
+              "host": ["{{baseUrl}}"],
+              "port": "3100",
+              "path": ["loki", "api", "v1", "query_range"],
+              "query": [
+                { "key": "query", "value": "{service_namespace=\"workshop\"}" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Loki returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Log entries exist', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.result).to.be.an('array');",
+                  "    pm.expect(jsonData.data.result.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Query Prometheus for checkout metrics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:9090/api/v1/query?query=checkout_outcomes_total",
+              "host": ["{{baseUrl}}"],
+              "port": "9090",
+              "path": ["api", "v1", "query"],
+              "query": [
+                { "key": "query", "value": "checkout_outcomes_total" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Prometheus returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Checkout metrics exist', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.result).to.be.an('array');",
+                  "    pm.expect(jsonData.data.result.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "lastOrderId",
+      "value": ""
+    }
+  ]
+}

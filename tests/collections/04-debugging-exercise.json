@@ -1,0 +1,225 @@
+{
+  "info": {
+    "name": "04 - Debugging Exercise Validation",
+    "description": "Generates traffic and validates that notification metrics are present in Prometheus, supporting the Module 4 debugging exercise.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Generate Traffic",
+      "item": [
+        {
+          "name": "POST checkout - traffic 1 (silver customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_debug_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 1, \"unitPrice\": 29.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout 1 returns success or expected failure', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST checkout - traffic 2 (gold customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_debug_002\",\n  \"customerId\": \"cust_dave_gold\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-PREMIUM-001\", \"quantity\": 1, \"unitPrice\": 499.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"express\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout 2 returns success or expected failure', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST checkout - traffic 3 (out of stock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_debug_003\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"OUT_OF_STOCK_ITEM\", \"quantity\": 1, \"unitPrice\": 19.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout 3 returns success or expected failure', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST checkout - traffic 4 (payment decline)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_debug_004\",\n  \"customerId\": \"cust_bob_decline\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-242\", \"quantity\": 1, \"unitPrice\": 49.50 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout 4 returns success or expected failure', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Validate Notification Metrics",
+      "item": [
+        {
+          "name": "Wait for metric scrape",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8084/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8084",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Allow time for Kafka consumer processing and Prometheus scrape",
+                  "setTimeout(function () {}, 3000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Notification service is healthy', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Query Prometheus - notifications_sent_total",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:9090/api/v1/query?query=notifications_sent_total",
+              "host": ["{{baseUrl}}"],
+              "port": "9090",
+              "path": ["api", "v1", "query"],
+              "query": [
+                { "key": "query", "value": "notifications_sent_total" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Prometheus returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Prometheus query succeeds', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('success');",
+                  "});",
+                  "",
+                  "pm.test('Notification metric exists (presence check)', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('object');",
+                  "    pm.expect(jsonData.data.result).to.be.an('array');",
+                  "    // Presence check only - values depend on workshop state",
+                  "    pm.expect(jsonData.data.result.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

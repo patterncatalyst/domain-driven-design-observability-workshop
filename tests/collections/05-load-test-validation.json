@@ -1,0 +1,329 @@
+{
+  "info": {
+    "name": "05 - Load Test Validation",
+    "description": "Light validation that the system handles sequential traffic without 500 errors. Not a real load test -- use hey/ghz for that.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Sequential Checkouts",
+      "item": [
+        {
+          "name": "Load checkout 1 - silver standard",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_load_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 2, \"unitPrice\": 29.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No 500 error on checkout 1', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load checkout 2 - gold express",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_load_002\",\n  \"customerId\": \"cust_dave_gold\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-PREMIUM-001\", \"quantity\": 1, \"unitPrice\": 499.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"express\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No 500 error on checkout 2', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load checkout 3 - out of stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_load_003\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"OUT_OF_STOCK_ITEM\", \"quantity\": 1, \"unitPrice\": 19.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No 500 error on checkout 3', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load checkout 4 - decline customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_load_004\",\n  \"customerId\": \"cust_bob_decline\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-242\", \"quantity\": 1, \"unitPrice\": 49.50 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No 500 error on checkout 4', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Load checkout 5 - multi-item order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_load_005\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 2, \"unitPrice\": 29.99 },\n    { \"sku\": \"SKU-242\", \"quantity\": 1, \"unitPrice\": 49.50 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('No 500 error on checkout 5', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([201, 422]);",
+                  "});",
+                  "",
+                  "pm.test('Response is valid JSON', function () {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Final Health Check",
+      "item": [
+        {
+          "name": "Order Service still healthy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8080/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Order Service healthy after load', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory Service still healthy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8081/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8081",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inventory Service healthy after load', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment Service still healthy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8082/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8082",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment Service healthy after load', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Shipping Service still healthy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8083/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8083",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Shipping Service healthy after load', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notification Service still healthy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}:8084/q/health/ready",
+              "host": ["{{baseUrl}}"],
+              "port": "8084",
+              "path": ["q", "health", "ready"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Notification Service healthy after load', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "id": "codespaces-env",
+  "name": "Codespaces",
+  "values": [
+    { "key": "baseUrl", "value": "http://localhost", "enabled": true }
+  ]
+}

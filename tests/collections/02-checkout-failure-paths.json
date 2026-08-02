@@ -1,0 +1,191 @@
+{
+  "info": {
+    "name": "02 - Checkout Failure Paths",
+    "description": "Tests the compensating transaction (saga rollback) paths: out-of-stock inventory and declined payments.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Saga Failures",
+      "item": [
+        {
+          "name": "POST checkout - out of stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_test_oos_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"OUT_OF_STOCK_ITEM\", \"quantity\": 1, \"unitPrice\": 19.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Out-of-stock checkout returns 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('Order status is CANCELLED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('CANCELLED');",
+                  "});",
+                  "",
+                  "pm.test('Response has orderId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.orderId).to.be.a('string');",
+                  "    pm.expect(jsonData.orderId).to.match(/^ord_/);",
+                  "});",
+                  "",
+                  "pm.test('Response has cancellation message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.be.a('string');",
+                  "    pm.expect(jsonData.message.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST checkout - payment declined",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_test_decline_001\",\n  \"customerId\": \"cust_bob_decline\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 1, \"unitPrice\": 29.99 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment-declined checkout returns 422', function () {",
+                  "    pm.response.to.have.status(422);",
+                  "});",
+                  "",
+                  "pm.test('Order status is CANCELLED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('CANCELLED');",
+                  "});",
+                  "",
+                  "pm.test('Response has orderId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.orderId).to.be.a('string');",
+                  "    pm.expect(jsonData.orderId).to.match(/^ord_/);",
+                  "});",
+                  "",
+                  "pm.test('Response has decline message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.be.a('string');",
+                  "    pm.expect(jsonData.message.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Direct Service Failures",
+      "item": [
+        {
+          "name": "POST inventory/reserve - out of stock SKU",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_test_inv_oos_001\",\n  \"items\": [\n    { \"sku\": \"OUT_LAPTOP\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8081/api/inventory/reserve",
+              "host": ["{{baseUrl}}"],
+              "port": "8081",
+              "path": ["api", "inventory", "reserve"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inventory reserve returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Reservation status is UNAVAILABLE', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('UNAVAILABLE');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST payments/authorize - decline customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_test_pay_decline_001\",\n  \"customerId\": \"cust_test_decline\",\n  \"amount\": 29.99,\n  \"currency\": \"USD\",\n  \"paymentMethod\": \"credit_card\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8082/api/payments/authorize",
+              "host": ["{{baseUrl}}"],
+              "port": "8082",
+              "path": ["api", "payments", "authorize"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment authorize returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Payment outcome is DECLINED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.outcome).to.eql('DECLINED');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

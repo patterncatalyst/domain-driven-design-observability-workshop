@@ -1,0 +1,229 @@
+{
+  "info": {
+    "name": "01 - Checkout Happy Path",
+    "description": "End-to-end checkout flow validating the full saga succeeds with a standard customer and available inventory.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Saga - Full Checkout",
+      "item": [
+        {
+          "name": "POST checkout - standard order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"cart_test_happy_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"lineItems\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 2, \"unitPrice\": 29.99 },\n    { \"sku\": \"SKU-242\", \"quantity\": 1, \"unitPrice\": 49.50 }\n  ],\n  \"paymentMethod\": \"credit_card\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8080/api/orders/checkout",
+              "host": ["{{baseUrl}}"],
+              "port": "8080",
+              "path": ["api", "orders", "checkout"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Checkout returns 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has orderId with ord_ prefix', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.orderId).to.be.a('string');",
+                  "    pm.expect(jsonData.orderId).to.match(/^ord_/);",
+                  "});",
+                  "",
+                  "pm.test('Order status is CONFIRMED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('CONFIRMED');",
+                  "});",
+                  "",
+                  "pm.test('Response includes reservationId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.reservationId).to.be.a('string');",
+                  "    pm.expect(jsonData.reservationId).to.match(/^res_/);",
+                  "});",
+                  "",
+                  "pm.test('Response includes authorizationId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.authorizationId).to.be.a('string');",
+                  "    pm.expect(jsonData.authorizationId).to.match(/^auth_/);",
+                  "});",
+                  "",
+                  "pm.test('Response includes shipmentId', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.shipmentId).to.be.a('string');",
+                  "    pm.expect(jsonData.shipmentId).to.match(/^ship_/);",
+                  "});",
+                  "",
+                  "pm.test('Response includes a message', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.message).to.be.a('string');",
+                  "    pm.expect(jsonData.message.length).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Individual Services",
+      "item": [
+        {
+          "name": "POST inventory/reserve - normal SKU",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_test_inv_001\",\n  \"items\": [\n    { \"sku\": \"SKU-100\", \"quantity\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8081/api/inventory/reserve",
+              "host": ["{{baseUrl}}"],
+              "port": "8081",
+              "path": ["api", "inventory", "reserve"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Inventory reserve returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Reservation status is RESERVED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('RESERVED');",
+                  "});",
+                  "",
+                  "pm.test('Response has reservationId with res_ prefix', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.reservationId).to.be.a('string');",
+                  "    pm.expect(jsonData.reservationId).to.match(/^res_/);",
+                  "});",
+                  "",
+                  "pm.test('Lines array contains reserved items', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.lines).to.be.an('array');",
+                  "    pm.expect(jsonData.lines.length).to.be.above(0);",
+                  "    pm.expect(jsonData.lines[0].available).to.be.true;",
+                  "    pm.expect(jsonData.lines[0].quantityReserved).to.eql(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST payments/authorize - normal customer",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_test_pay_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"amount\": 109.48,\n  \"currency\": \"USD\",\n  \"paymentMethod\": \"credit_card\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8082/api/payments/authorize",
+              "host": ["{{baseUrl}}"],
+              "port": "8082",
+              "path": ["api", "payments", "authorize"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Payment authorize returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Payment outcome is AUTHORIZED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.outcome).to.eql('AUTHORIZED');",
+                  "});",
+                  "",
+                  "pm.test('Response has authorizationId with auth_ prefix', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.authorizationId).to.be.a('string');",
+                  "    pm.expect(jsonData.authorizationId).to.match(/^auth_/);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST shipments/schedule - standard shipping",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"ord_test_ship_001\",\n  \"customerId\": \"cust_alice_silver\",\n  \"shippingClass\": \"standard\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}:8083/api/shipments/schedule",
+              "host": ["{{baseUrl}}"],
+              "port": "8083",
+              "path": ["api", "shipments", "schedule"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Shipment schedule returns 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Shipment outcome is SCHEDULED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.outcome).to.eql('SCHEDULED');",
+                  "});",
+                  "",
+                  "pm.test('Response has shipmentId with ship_ prefix', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.shipmentId).to.be.a('string');",
+                  "    pm.expect(jsonData.shipmentId).to.match(/^ship_/);",
+                  "});",
+                  "",
+                  "pm.test('Estimated days is a positive number', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.estimatedDays).to.be.a('number');",
+                  "    pm.expect(jsonData.estimatedDays).to.be.above(0);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

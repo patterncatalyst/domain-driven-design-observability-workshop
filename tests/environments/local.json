@@ -1,0 +1,7 @@
+{
+  "id": "local-env",
+  "name": "Local Docker Compose",
+  "values": [
+    { "key": "baseUrl", "value": "http://localhost", "enabled": true }
+  ]
+}
