@@ -1,2 +1,13 @@
-# Application layer - use cases, command/query handlers
-# To be filled during workshop modules.
+"""Application layer — use cases and command handlers."""
+
+from inventory_service.application.reserve_stock import (
+    ReserveItem,
+    ReserveStockCommand,
+    ReserveStockUseCase,
+)
+
+__all__ = [
+    "ReserveItem",
+    "ReserveStockCommand",
+    "ReserveStockUseCase",
+]

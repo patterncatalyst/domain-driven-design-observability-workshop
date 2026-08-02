@@ -42,10 +42,11 @@ async def liveness():
 
 
 # ---------------------------------------------------------------------------
-# Service routes - to be implemented during workshop modules
+# Service routes
 # ---------------------------------------------------------------------------
-# POST /api/inventory/reserve   (Module 1)
-# POST /api/inventory/release   (Module 1)
+from inventory_service.infrastructure.routes import router  # noqa: E402
+
+app.include_router(router)
 
 
 # ---------------------------------------------------------------------------
