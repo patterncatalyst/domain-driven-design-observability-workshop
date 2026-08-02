@@ -1,0 +1,12 @@
+{
+  "name": "building-observable-domains-presentation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Building Observable Domains — DDD + OpenTelemetry workshop introduction deck",
+  "scripts": {
+    "build": "node deck.js"
+  },
+  "dependencies": {
+    "pptxgenjs": "^3.12.0"
+  }
+}
