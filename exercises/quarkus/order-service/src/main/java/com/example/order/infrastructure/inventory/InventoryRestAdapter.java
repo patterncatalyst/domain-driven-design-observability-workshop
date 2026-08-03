@@ -72,7 +72,7 @@ public class InventoryRestAdapter implements InventoryPort {
         try {
             // 1. Outbound translation: Order -> wire
             InventoryReserveRequestDto wireRequest = toWire(order);
-            span.setAttribute("acl.wire.line_count", wireRequest.lineItems().size());
+            span.setAttribute("acl.wire.line_count", wireRequest.items().size());
 
             // 2. Wire call - the rest-client extension adds its own span
             //    underneath this one for the HTTP exchange.
@@ -106,15 +106,14 @@ public class InventoryRestAdapter implements InventoryPort {
     // ------------------------------------------------------------------------
 
     private static InventoryReserveRequestDto toWire(Order order) {
-        List<InventoryReserveRequestDto.Line> wireLines = order.lineItems().stream()
-                .map(li -> new InventoryReserveRequestDto.Line(
-                        li.sku().value(),     // Order.Sku -> Inventory.productCode
+        List<InventoryReserveRequestDto.Item> wireItems = order.lineItems().stream()
+                .map(li -> new InventoryReserveRequestDto.Item(
+                        li.sku().value(),
                         li.quantity()))
                 .toList();
         return new InventoryReserveRequestDto(
                 order.id().value(),
-                order.customerId().value(),
-                wireLines);
+                wireItems);
     }
 
     private ReservationOutcome fromWire(InventoryReserveResponseDto wire) {

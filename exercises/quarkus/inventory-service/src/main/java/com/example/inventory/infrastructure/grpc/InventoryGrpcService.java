@@ -56,7 +56,7 @@ public class InventoryGrpcService extends InventoryServiceGrpc.InventoryServiceI
 
     private static ReserveStockCommand toCommand(ReserveRequest request) {
         List<ReservationLine> lines = request.getLineItemsList().stream()
-                .map(li -> new ReservationLine(
+                .map(li -> ReservationLine.reserved(
                         ProductCode.of(li.getSku()),
                         li.getQuantity()))
                 .toList();
