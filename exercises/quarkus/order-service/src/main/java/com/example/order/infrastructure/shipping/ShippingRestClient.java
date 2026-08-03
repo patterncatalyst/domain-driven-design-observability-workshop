@@ -20,9 +20,8 @@ public interface ShippingRestClient {
     record ScheduleRequest(
             String orderId,
             String customerId,
-            String shippingClass,
-            int totalLineItemCount
+            String shippingClass
     ) {}
 
-    record ScheduleResponse(String shipmentId) {}
+    record ScheduleResponse(String shipmentId, String outcome, int estimatedDays) {}
 }

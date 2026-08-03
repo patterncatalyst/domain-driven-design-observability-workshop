@@ -43,8 +43,7 @@ public class ShippingRestAdapter implements ShippingPort {
             var response = client.schedule(new ShippingRestClient.ScheduleRequest(
                     order.id().value(),
                     order.customerId().value(),
-                    shippingClass,
-                    order.totalLineItemCount()));
+                    shippingClass));
 
             span.setAttribute("shipment.id", response.shipmentId());
             return new ShipmentOutcome.Scheduled(response.shipmentId());

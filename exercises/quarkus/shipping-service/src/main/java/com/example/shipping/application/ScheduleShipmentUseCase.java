@@ -38,18 +38,17 @@ public class ScheduleShipmentUseCase {
             span.setAttribute("customer.id", command.customerId());
             span.setAttribute("customer.tier", tier);
             span.setAttribute("shipping.class", command.shippingClass());
-            span.setAttribute("shipping.line_items_count", command.totalLineItemCount());
 
             Shipment shipment = Shipment.schedule(
                     command.orderId(),
-                    command.shippingClass(),
-                    command.totalLineItemCount());
+                    command.shippingClass());
 
             ctx.include(ShippingContextKey.SHIPMENT_ID.of(shipment.id().value()));
             span.setAttribute("shipment.id", shipment.id().value());
+            span.setAttribute("shipping.estimated_days", shipment.estimatedDays());
 
-            log.info("Shipment scheduled: {} (class={} items={})",
-                    shipment.id(), command.shippingClass(), command.totalLineItemCount());
+            log.info("Shipment scheduled: {} (class={} days={})",
+                    shipment.id(), command.shippingClass(), shipment.estimatedDays());
 
             meterRegistry.counter("shipping_shipments_scheduled_total",
                     "class", command.shippingClass(),

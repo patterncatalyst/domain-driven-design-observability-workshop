@@ -27,8 +27,7 @@ public class ShippingRestResource {
         Shipment shipment = useCase.schedule(new ScheduleShipmentCommand(
                 request.orderId(),
                 request.customerId(),
-                request.shippingClass(),
-                request.totalLineItemCount()));
+                request.shippingClass()));
         return new ScheduleResponse(
                 shipment.id().value(),
                 "SCHEDULED",
@@ -38,8 +37,7 @@ public class ShippingRestResource {
     public record ScheduleRequest(
             String orderId,
             String customerId,
-            String shippingClass,
-            int totalLineItemCount
+            String shippingClass
     ) {}
 
     public record ScheduleResponse(String shipmentId, String outcome, int estimatedDays) {}
