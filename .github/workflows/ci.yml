@@ -26,11 +26,10 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Build with Maven
         run: ./mvnw -B -ntp install -DskipTests
-    continue-on-error: true
 
   python-build:
     name: Build Python
@@ -44,7 +43,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install dependencies
         run: pip install -r order_service/requirements.txt

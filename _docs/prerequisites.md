@@ -66,7 +66,7 @@ mvn -version  # or ./mvnw -version
 
 #### Python
 
-- **Python 3.14** -- download from [python.org](https://www.python.org/) or use [pyenv](https://github.com/pyenv/pyenv): `pyenv install 3.14`
+- **Python 3.14** -- download from [python.org](https://www.python.org/) or use [pyenv](https://github.com/pyenv/pyenv): `pyenv install 3.14`. The workshop Docker images run Python 3.14 (UBI 9).
 - **pip** -- included with Python
 
 Verify:
