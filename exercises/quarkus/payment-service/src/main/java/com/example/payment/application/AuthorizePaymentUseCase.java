@@ -37,7 +37,7 @@ public class AuthorizePaymentUseCase {
         this.meterRegistry = meterRegistry;
     }
 
-    @WithSpan("Payment.Authorize")
+    @WithSpan("Payment.Authorize")                           // <-- domain-named span
     public Authorization authorize(AuthorizePaymentCommand command) {
 
         try (var ctx = DomainContext.open(

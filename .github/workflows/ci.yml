@@ -26,11 +26,10 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
+          java-version: 25
 
       - name: Build with Maven
         run: ./mvnw -B -ntp install -DskipTests
-    continue-on-error: true
 
   python-build:
     name: Build Python
@@ -44,17 +43,21 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install dependencies
         run: pip install -r order_service/requirements.txt
 
       - name: Validate imports
+        # Each service runs from its own directory (WORKDIR=<service>) with the
+        # project root on PYTHONPATH for shared_observability, so validate the
+        # same way: cd into the service, import its top-level domain package.
         run: |
-          PYTHONPATH=$PWD python -c "from shared_observability import DomainContext, get_baggage, set_baggage"
-          PYTHONPATH=$PWD python -c "from payment_service.domain.models import Authorization, AuthorizationOutcome"
-          PYTHONPATH=$PWD python -c "from shipping_service.domain.models import Shipment, ShipmentId"
-          PYTHONPATH=$PWD python -c "from inventory_service.domain.models import Reservation, ReservationStatus"
+          root=$PWD
+          PYTHONPATH=$root python -c "from shared_observability import DomainContext, get_baggage, set_baggage"
+          (cd payment_service   && PYTHONPATH=$root python -c "from domain.models import Authorization, AuthorizationOutcome")
+          (cd shipping_service  && PYTHONPATH=$root python -c "from domain.models import Shipment, ShipmentId")
+          (cd inventory_service && PYTHONPATH=$root python -c "from domain.models import Reservation, ReservationStatus")
 
   dotnet-build:
     name: Build C#

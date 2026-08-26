@@ -79,6 +79,8 @@ with DomainContext(
 ```csharp
 // OrderService/Application/CheckoutSaga.cs
 
+// Module 3a: populate the logging scope with domain identifiers for the
+// duration of the saga. All log lines in this scope carry these.
 using var domainContext = new DomainContext(
     _logger,
     OrderContextKey.OrderId.Of(orderId.Value),
@@ -252,12 +254,13 @@ def _record_outcome(self, outcome: str, profile: CustomerProfile, start_time: fl
 ```csharp
 // OrderService/Application/CheckoutSaga.cs
 
+// Module 3c: business metrics - per-outcome, per-tier counter and timer.
 private static readonly Counter<long> OutcomeCounter =
     Meter.CreateCounter<long>("checkout_outcomes_total");
 private static readonly Histogram<double> DurationHistogram =
     Meter.CreateHistogram<double>("checkout_duration_seconds", "s");
 
-// Recording an outcome:
+// Module 3c: record the counter and timer for each checkout outcome.
 private void RecordOutcome(string outcome, string tier, long startTime)
 {
     var elapsed = Stopwatch.GetElapsedTime(startTime);
@@ -272,11 +275,16 @@ private void RecordOutcome(string outcome, string tier, long startTime)
 
 ### What business questions these answer
 
+> **Namespace note.** The OpenTelemetry Collector exports every metric under the
+> `workshop` namespace, so the code-level name `checkout_outcomes_total` becomes
+> **`workshop_checkout_outcomes_total`** in Prometheus and Grafana. Use the
+> prefixed name in the queries below (the pre-provisioned dashboards already do).
+
 | Metric | Question it answers | Example query |
 |---|---|---|
-| `checkout_outcomes_total` | How many checkouts succeeded vs failed today? | `sum by (outcome) (checkout_outcomes_total)` |
-| `checkout_outcomes_total{tier="GOLD"}` | Are gold-tier customers experiencing more failures? | `checkout_outcomes_total{tier="GOLD", outcome=~"cancelled.*"}` |
-| `checkout_duration_seconds` | What is the p95 checkout latency? | `histogram_quantile(0.95, rate(checkout_duration_seconds_bucket[5m]))` |
+| `checkout_outcomes_total` | How many checkouts succeeded vs failed today? | `sum by (outcome) (workshop_checkout_outcomes_total)` |
+| `checkout_outcomes_total{tier="GOLD"}` | Are gold-tier customers experiencing more failures? | `workshop_checkout_outcomes_total{tier="GOLD", outcome=~"cancelled.*"}` |
+| `checkout_duration_seconds` | What is the p95 checkout latency? | `histogram_quantile(0.95, rate(workshop_checkout_duration_seconds_bucket[5m]))` |
 
 Notice the label discipline: `outcome` is a small enum (success, cancelled_inventory, cancelled_payment, cancelled_shipping) and `tier` is bounded (BRONZE, SILVER, GOLD, PLATINUM). This keeps cardinality low -- we will return to this in Module 5.
 
@@ -317,10 +325,11 @@ _logger.LogInformation("Checkout confirmed: reservation={ReservationId} authoriz
     reservationId, authorizationId, shipmentId);
 ```
 
-**Save and restart:**
+**Save, then rebuild and restart the service** so the container picks up your
+change (`--build` is required -- a plain `restart` would reuse the old image):
 
 ```bash
-docker compose restart order-service
+docker compose up --build -d order-service
 ```
 
 **Verify:** Run a checkout, then query Loki in Grafana Explore:
@@ -380,15 +389,15 @@ public ReservationOutcome reserve(Order order) {
     }
 }
 
-// Outbound: Order.Sku -> Inventory.productCode
+// Outbound: Order.Sku -> Inventory wire format
 private static InventoryReserveRequestDto toWire(Order order) {
-    List<InventoryReserveRequestDto.Line> wireLines = order.lineItems().stream()
-            .map(li -> new InventoryReserveRequestDto.Line(
-                    li.sku().value(),     // Order.Sku -> Inventory.productCode
+    List<InventoryReserveRequestDto.Item> wireItems = order.lineItems().stream()
+            .map(li -> new InventoryReserveRequestDto.Item(
+                    li.sku().value(),     // Order.Sku -> Inventory.sku
                     li.quantity()))
             .toList();
     return new InventoryReserveRequestDto(
-            order.id().value(), order.customerId().value(), wireLines);
+            order.id().value(), wireItems);
 }
 ```
 

@@ -44,7 +44,7 @@ class AuthorizePaymentUseCase:
     for the workshop -- no real payment gateway).
     """
 
-    @tracer.start_as_current_span("Payment.Authorize")
+    @tracer.start_as_current_span("Payment.Authorize")       # <-- domain-named span
     def authorize(self, command: AuthorizePaymentCommand) -> Authorization:
         span = trace.get_current_span()
 

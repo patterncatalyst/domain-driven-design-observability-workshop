@@ -20,10 +20,14 @@ import com.example.workshop.observability.BaggageHelpers;
 import com.example.workshop.observability.DomainContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
+import io.opentelemetry.api.GlobalOpenTelemetry;
+import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.common.Attributes;
+import io.opentelemetry.api.metrics.DoubleHistogram;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.instrumentation.annotations.WithSpan;
 import io.opentelemetry.context.Scope;
+import java.util.List;
 import jakarta.enterprise.context.ApplicationScoped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,7 +94,7 @@ public class CheckoutSaga {
     // -----------------------------------------------------------------------
     private final AtomicInteger ordersInPaymentVerification = new AtomicInteger(0);
     private final MeterRegistry meterRegistry;
-    private final Timer checkoutDurationTimer;
+    private final DoubleHistogram checkoutDurationHistogram;
 
     public CheckoutSaga(InventoryPort inventory,
                         PaymentPort payment,
@@ -111,12 +115,20 @@ public class CheckoutSaga {
                 ordersInPaymentVerification,
                 AtomicInteger::get);
 
-        // Module 3c: timer for end-to-end checkout duration. Outcome label
-        // is added per-record via Timer.Builder.
-        this.checkoutDurationTimer = Timer.builder("checkout_duration_seconds")
-                .description("End-to-end checkout saga duration")
-                .publishPercentileHistogram()
-                .register(meterRegistry);
+        // Module 3c: end-to-end checkout duration, recorded via the OpenTelemetry
+        // API directly (not a Micrometer Timer) so the exported name matches the
+        // Python and C# services and the Grafana dashboards exactly:
+        // workshop_checkout_duration_seconds{_bucket,_count,_sum}. A Micrometer
+        // Timer would export a milliseconds unit and become
+        // ..._seconds_milliseconds, which no dashboard queries.
+        this.checkoutDurationHistogram = GlobalOpenTelemetry.get()
+                .getMeter("order-service")
+                .histogramBuilder("checkout_duration_seconds")
+                .setDescription("End-to-end checkout saga duration")
+                .setUnit("s")
+                .setExplicitBucketBoundariesAdvice(List.of(
+                        0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0))
+                .build();
     }
 
     /**
@@ -274,6 +286,9 @@ public class CheckoutSaga {
         meterRegistry.counter("checkout_outcomes_total",
                 "outcome", outcome,
                 "tier", profile.tier().name()).increment();
-        checkoutDurationTimer.record(java.time.Duration.ofNanos(durationNanos));
+        checkoutDurationHistogram.record(durationNanos / 1_000_000_000.0,
+                Attributes.of(
+                        AttributeKey.stringKey("outcome"), outcome,
+                        AttributeKey.stringKey("tier"), profile.tier().name()));
     }
 }
