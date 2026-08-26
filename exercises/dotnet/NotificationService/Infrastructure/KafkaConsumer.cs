@@ -149,7 +149,7 @@ public sealed class OrderEventConsumer : BackgroundService
             // ------------------------------------------------------------------
             // 5. Read customer tier from OTel baggage (set by upstream service)
             // ------------------------------------------------------------------
-            var customerTier = BaggageHelpers.Get("customer.tier") ?? "unknown";
+            var customerTier = "unknown";  // BUG: forgot to read from baggage
 
             // ------------------------------------------------------------------
             // 6. Deserialize the event and dispatch to use case

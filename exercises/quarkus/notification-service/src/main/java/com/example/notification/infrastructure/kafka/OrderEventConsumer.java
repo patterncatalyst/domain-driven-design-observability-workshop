@@ -92,8 +92,7 @@ public class OrderEventConsumer {
             //
             // Module 4: this line is the bug magnet. cp-4-broken replaces
             // the get with a hardcoded "unknown".
-            String customerTier = BaggageHelpers.get("customer.tier");
-            if (customerTier == null) customerTier = "unknown";
+            String customerTier = "unknown";  // BUG: forgot to read from baggage
 
             Span span = Span.current();
             span.setAttribute("event.type", event.getClass().getSimpleName());

@@ -144,7 +144,7 @@ class OrderEventConsumer:
                     #
                     # Module 4: this line is the bug magnet. cp-4-broken
                     # replaces the get with a hardcoded "unknown".
-                    customer_tier = get_baggage("customer.tier") or "unknown"
+                    customer_tier = "unknown"  # BUG: forgot to read from baggage
 
                     try:
                         event = deserialize_event(msg.value().decode("utf-8"))
