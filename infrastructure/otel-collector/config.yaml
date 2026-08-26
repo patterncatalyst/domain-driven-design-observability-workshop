@@ -109,7 +109,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      # In Module 6, swap the line above for:
+      # In Module 5, swap the line above for:
       # processors: [memory_limiter, resource, tail_sampling, batch]
       exporters: [otlp/tempo]
 

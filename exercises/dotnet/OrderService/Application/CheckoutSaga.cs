@@ -29,6 +29,7 @@ public sealed class CheckoutSaga
 {
     private static readonly ActivitySource ActivitySource = new("order-service");
     private static readonly Meter Meter = new("order-service");
+    // Module 3c: business metrics - per-outcome, per-tier counter and timer.
     private static readonly Counter<long> OutcomeCounter =
         Meter.CreateCounter<long>("checkout_outcomes_total");
     private static readonly Histogram<double> DurationHistogram =
@@ -63,6 +64,8 @@ public sealed class CheckoutSaga
         var customerId = Domain.CustomerId.Of(command.CustomerId);
         var cartId = Domain.CartId.Of(command.CartId);
 
+        // Module 3a: populate the logging scope with this context's identifiers
+        // for the duration of the saga. All log lines in this scope carry these.
         using var domainContext = new DomainContext(
             _logger,
             OrderContextKey.OrderId.Of(orderId.Value),
@@ -73,6 +76,7 @@ public sealed class CheckoutSaga
         var profile = _customerLookup.Lookup(customerId);
         var tierValue = profile.Tier.ToValue();
 
+        // Module 3b: annotate this span with business attributes.
         using var activity = ActivitySource.StartActivity("Order.Checkout");
         activity?.SetTag("order.id", orderId.Value);
         activity?.SetTag("order.value", (double)order.Total().Amount);
@@ -82,6 +86,8 @@ public sealed class CheckoutSaga
 
         _logger.LogInformation("Checkout starting");
 
+        // Module 3b: propagate customer.tier downstream as baggage so every
+        // downstream service can read it without it appearing in any API.
         BaggageHelpers.Set(OrderContextKey.CustomerTier.Key, tierValue);
 
         var startTime = Stopwatch.GetTimestamp();
@@ -171,6 +177,7 @@ public sealed class CheckoutSaga
             $"Order cancelled at {failedAt}: {reason}");
     }
 
+    // Module 3c: record the per-outcome, per-tier counter and duration timer.
     private void RecordOutcome(string outcome, string tier, long startTime)
     {
         var elapsed = Stopwatch.GetElapsedTime(startTime);

@@ -28,6 +28,7 @@ public sealed class InventoryRestAdapter : IInventoryPort
 
         try
         {
+            // 1. Outbound translation: Order -> wire (Order.Sku -> Inventory.sku)
             var wireRequest = new
             {
                 orderId = order.Id.Value,
@@ -38,11 +39,13 @@ public sealed class InventoryRestAdapter : IInventoryPort
                 }).ToArray()
             };
 
+            // 2. Wire call
             var response = await _httpClient.PostAsJsonAsync(
                 "/api/inventory/reserve", wireRequest, JsonOptions);
 
             response.EnsureSuccessStatusCode();
 
+            // 3. Inbound translation - drift dies here, not in the saga.
             var responseBody = await response.Content.ReadAsStringAsync();
             using var doc = JsonDocument.Parse(responseBody);
             var root = doc.RootElement;

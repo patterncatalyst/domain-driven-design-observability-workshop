@@ -28,7 +28,7 @@ public class AuthorizePaymentUseCase
 
     public Authorization Authorize(AuthorizePaymentCommand command)
     {
-        using var activity = Source.StartActivity("Payment.Authorize");
+        using var activity = Source.StartActivity("Payment.Authorize");  // <-- domain-named span
 
         using var ctx = new DomainContext(_logger,
             PaymentContextKey.OrderId.Of(command.OrderId),
