@@ -1,12 +1,12 @@
 # Python Implementation -- DDD + OpenTelemetry Workshop
 
 Five microservices implementing a DDD e-commerce checkout saga with full
-OpenTelemetry observability. Built on FastAPI, Python 3.12, frozen dataclasses,
+OpenTelemetry observability. Built on FastAPI, Python 3.14, frozen dataclasses,
 Protocol-based ports, and structlog.
 
 ## Prerequisites
 
-- **Python 3.12+** (Docker images use UBI 9 Python 3.12)
+- **Python 3.14** (Docker images use UBI 9 Python 3.14)
 - **Docker** and **Docker Compose** (for the full stack)
 - **Newman** (`npm install -g newman`) for API tests
 

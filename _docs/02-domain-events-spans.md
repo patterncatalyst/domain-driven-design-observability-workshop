@@ -272,7 +272,7 @@ public async Task<CheckoutResult> Checkout(CheckoutCommand command)
     activity?.SetTag("order.id", orderId.Value);
     activity?.SetTag("order.value", (double)order.Total().Amount);
     activity?.SetTag("order.line_items_count", order.TotalLineItemCount());
-    activity?.SetTag("customer.id", command.CustomerId);
+    activity?.SetTag("customer.id", customerId.Value);
     activity?.SetTag("customer.tier", profile.Tier.ToValue());
 
     // Propagate customer.tier downstream as OTel baggage
@@ -317,10 +317,13 @@ span.set_attribute("payment.risk_score", "high" if command.amount > 100.0 else "
 activity?.SetTag("payment.risk_score", command.Amount > 100m ? "high" : "normal");
 ```
 
-**Save the file.** The service will automatically rebuild (Quarkus dev mode) or you will need to restart the container:
+**Save the file**, then rebuild and restart the service so the container picks
+up your change. Because the services run as built container images (not in a
+live file-watching dev mode), you need `--build` here -- a plain
+`docker compose restart` would reuse the old image:
 
 ```bash
-docker compose restart payment-service
+docker compose up --build -d payment-service
 ```
 
 **Verify:** Run a checkout and check the trace in Tempo. Find the `Payment.Authorize` span -- you should see `payment.risk_score = "normal"` (for amounts <= 100) or `payment.risk_score = "high"` (for amounts > 100) in the span attributes.
@@ -538,7 +541,7 @@ Every identifier type in the workshop follows this pattern:
 | Order | `CartId` | `cart_` |
 | Inventory | `ReservationId` | `res_` |
 | Payment | `AuthorizationId` | `auth_` |
-| Shipping | `ShipmentId` | `shp_` |
+| Shipping | `ShipmentId` | `ship_` |
 | Notification | `NotificationId` | `notif_` |
 
 The prefixes serve two purposes. First, they make identifiers **grep-friendly** -- you can search logs for `auth_` and instantly find payment-related entries. Second, they prevent **cross-ID confusion** -- you cannot accidentally pass an `OrderId` where an `AuthorizationId` is expected, because the type system (and the prefix) catch the mistake.
@@ -601,7 +604,7 @@ Order.Checkout                          order.id=ord_..., customer.tier=GOLD
   ├── Order.Payment.Authorize           order.id=ord_...
   │     └── Payment.Authorize           authorization.id=auth_..., outcome=AUTHORIZED
   ├── Order.Shipping.Schedule           order.id=ord_...
-  │     └── Shipping.Schedule           shipment.id=shp_..., class=express
+  │     └── Shipping.Schedule           shipment.id=ship_..., class=express
   └── Order.Events.Publish              event_type=OrderConfirmed
 ```
 

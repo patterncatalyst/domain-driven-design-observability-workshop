@@ -207,7 +207,13 @@ The key insight: at **async boundaries** like Kafka, OTel context does not propa
 
 ## 4.7 Verify the fix
 
-Restart the notification service to pick up your code change. If you are running locally with a file watcher (e.g., Quarkus dev mode, Python with `--reload`, or `dotnet watch`), the service should auto-restart. Otherwise, stop and restart it manually.
+Rebuild and restart the notification service to pick up your code change. Because
+the services run as built container images, use `--build` (a plain
+`docker compose restart` would reuse the old image):
+
+```bash
+docker compose up --build -d notification-service
+```
 
 Run the validation tests:
 

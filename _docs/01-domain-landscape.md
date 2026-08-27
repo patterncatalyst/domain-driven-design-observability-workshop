@@ -126,7 +126,7 @@ class Order:
     cart_id: CartId
     line_items: tuple[LineItem, ...]
     status: OrderStatus
-    placed_at: str
+    placed_at: datetime
     cancel_reason: str | None = None
 
     @classmethod
@@ -136,17 +136,19 @@ class Order:
             cart_id=cart_id,
             line_items=tuple(line_items),
             status=OrderStatus.PLACED,
-            placed_at=datetime.now(timezone.utc).isoformat(),
+            placed_at=datetime.now(timezone.utc),
         )
 
     def confirm(self) -> Order:
-        if self.status is not OrderStatus.PLACED:
-            raise ValueError(f"Cannot confirm order in {self.status}")
+        if self.status != OrderStatus.PLACED:
+            raise IllegalStateError(
+                f"Cannot confirm order in status {self.status.value}")
         return replace(self, status=OrderStatus.CONFIRMED)
 
     def cancel(self, reason: str) -> Order:
-        if self.status is not OrderStatus.PLACED:
-            raise ValueError(f"Cannot cancel order in {self.status}")
+        if self.status != OrderStatus.PLACED:
+            raise IllegalStateError(
+                f"Cannot cancel order in status {self.status.value}")
         return replace(self, status=OrderStatus.CANCELLED,
                        cancel_reason=reason)
 ```
