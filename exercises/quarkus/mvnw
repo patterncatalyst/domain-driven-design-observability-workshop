@@ -124,7 +124,7 @@ if [ -r "$wrapperJarPath" ]; then
     "${javaSource[@]}" \
     -classpath "$wrapperJarPath" \
     "-Dmaven.multiModuleProjectDirectory=$currentDir" \
-    $wrapperLauncher $MAVEN_ARGS "$@"
+    $wrapperLauncher ${MAVEN_ARGS:-} "$@"
 fi
 
 # Download distribution (only-script mode: no wrapper jar)
@@ -176,4 +176,4 @@ fi
 MVN_EXECUTABLE="$(find "$MVN_HOME" -name "$MVN_CMD" -type f 2>/dev/null | head -1)"
 [ -x "$MVN_EXECUTABLE" ] || die "ERROR: Could not find $MVN_CMD in $MVN_HOME"
 
-exec "$MVN_EXECUTABLE" $MAVEN_ARGS "$@"
+exec "$MVN_EXECUTABLE" ${MAVEN_ARGS:-} "$@"

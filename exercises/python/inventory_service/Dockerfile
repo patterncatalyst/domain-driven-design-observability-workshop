@@ -1,5 +1,5 @@
 # Build context is exercises/python/ (the project root)
-FROM registry.access.redhat.com/ubi9/python-312:latest
+FROM registry.access.redhat.com/ubi9/python-314:latest
 
 WORKDIR /opt/app-root/src
 
