@@ -183,12 +183,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}:9090/api/v1/query?query=notifications_sent_total",
+              "raw": "{{baseUrl}}:9090/api/v1/query?query=workshop_notifications_sent_total",
               "host": ["{{baseUrl}}"],
               "port": "9090",
               "path": ["api", "v1", "query"],
               "query": [
-                { "key": "query", "value": "notifications_sent_total" }
+                { "key": "query", "value": "workshop_notifications_sent_total" }
               ]
             }
           },
