@@ -19,6 +19,9 @@ services:
     environment:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
       OTEL_SERVICE_NAME: order-service
+      # Emit explicit-bucket histograms (not base2 exponential) so the classic
+      # Prometheus exporter produces usable _bucket/le series for p95 queries.
+      OTEL_EXPORTER_OTLP_METRICS_DEFAULT_HISTOGRAM_AGGREGATION: explicit_bucket_histogram
       KAFKA_BOOTSTRAP_SERVERS: kafka:29092
       QUARKUS_REST_CLIENT_INVENTORY_REST_URL: http://inventory-service:8081
       QUARKUS_REST_CLIENT_PAYMENT_REST_URL: http://payment-service:8082

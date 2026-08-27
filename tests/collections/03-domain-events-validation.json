@@ -166,12 +166,12 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}:9090/api/v1/query?query=checkout_outcomes_total",
+              "raw": "{{baseUrl}}:9090/api/v1/query?query=workshop_checkout_outcomes_total",
               "host": ["{{baseUrl}}"],
               "port": "9090",
               "path": ["api", "v1", "query"],
               "query": [
-                { "key": "query", "value": "checkout_outcomes_total" }
+                { "key": "query", "value": "workshop_checkout_outcomes_total" }
               ]
             }
           },
