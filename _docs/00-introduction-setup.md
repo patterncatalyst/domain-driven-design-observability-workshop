@@ -80,27 +80,29 @@ Pick the language you are most comfortable with and follow along in that track. 
 
 The fastest way to get started is with GitHub Codespaces. The repository includes a full devcontainer configuration that provisions the observability stack automatically.
 
-**Step 1. Fork the repository**
+For a two-hour workshop you do **not** need to fork -- you can launch a Codespace directly on the workshop repository. Fork only if you want to push your changes back to a repository of your own.
 
-Navigate to [github.com/patterncatalyst/domain-driven-design-observability-workshop](https://github.com/patterncatalyst/domain-driven-design-observability-workshop) and click **Fork**.
+**Step 1. Create a Codespace on your language branch (no fork required)**
 
-**Step 2. Create a Codespace on your language branch**
-
-From your fork, switch to the branch for your language:
+Go to [github.com/patterncatalyst/domain-driven-design-observability-workshop](https://github.com/patterncatalyst/domain-driven-design-observability-workshop) and switch to the branch for your language:
 
 - `workshop/quarkus` for Java/Quarkus
 - `workshop/python` for Python/FastAPI
 - `workshop/dotnet` for C#/.NET
 
-Click **Code > Codespaces > Create codespace on [branch]**.
+Click **Code > Codespaces > Create codespace on [branch]**. All of your hands-on edits (Modules 2, 3, and 4) live inside the Codespace, so you never need to push anything for the workshop itself.
 
-**Step 3. Wait for the post-create script**
+> **Want to save your work?** Fork the repository first, then create the Codespace on your fork. When the Fork dialog appears, **uncheck "Copy the `main` branch only"** -- otherwise your fork gets only `main` and is missing the `workshop/*` branches (and the `cp-4-broken` branch used in Module 4).
+
+**Step 2. Wait for the post-create script**
 
 The devcontainer runs a post-create script that pulls container images and builds the services. This takes approximately 5-10 minutes on first launch. Watch the terminal for completion.
 
-**Step 4. Services start automatically**
+**Step 3. Services start automatically**
 
 The `post-start.sh` script brings up the full Docker Compose stack -- all five services plus the observability infrastructure (Kafka, OpenTelemetry Collector, Grafana, Tempo, Loki, Prometheus). No manual `docker compose up` needed.
+
+> **Machine and quota.** Codespaces provisions a **4-core / 16 GB** machine for this devcontainer -- comfortable for the full stack. The GitHub free tier includes **120 core-hours/month** (~30 hours on a 4-core box), which is plenty for the workshop. First boot takes ~5-10 minutes; subsequent starts are much faster.
 
 ---
 
