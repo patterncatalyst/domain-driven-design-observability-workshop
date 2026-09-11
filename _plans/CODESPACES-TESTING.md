@@ -40,9 +40,11 @@ Two fixes (either/both):
    Codespace and never need pushing, so a fork is only needed if participants want to save
    work back.
 
-**STATUS: not yet applied to `_docs/00-introduction-setup.md`.** Pending decision on which
-option(s) to include. (Claude offered to update Module 0 with the uncheck note + the
-no-fork option + machine/quota note.)
+**STATUS: applied to `_docs/00-introduction-setup.md` (Section 3).** Chosen approach:
+no-fork path as primary ("Create a Codespace directly on `workshop/<lang>`"), plus a fork
+note that includes the **uncheck "Copy the `main` branch only"** warning, plus a
+machine/quota callout (4-core/16 GB, 120 core-hours/mo free). Still needs propagation to
+`workshop/*` + `cp-4-broken` after merge to `main`.
 
 ---
 
@@ -103,6 +105,7 @@ list of fixes. Key operational notes when following the walkthrough:
 ---
 
 ## Open follow-ups
-- [ ] Apply the Module 0 fork-branch fix (uncheck "Copy the main branch only") and/or add
-      the no-fork Codespaces path + machine/quota note to `_docs/00-introduction-setup.md`.
-- [ ] (Optional) Add a note to Module 0 about the 4-core/16 GB machine and free-tier hours.
+- [x] Apply the Module 0 fork-branch fix (uncheck "Copy the main branch only") + no-fork
+      Codespaces path + machine/quota note to `_docs/00-introduction-setup.md`.
+- [ ] Merge `docs/codespaces-testing` into `main`, then propagate to `workshop/*` +
+      `cp-4-broken` via `git merge --no-ff main` (keep cp-4-broken's 3 consumers broken).
