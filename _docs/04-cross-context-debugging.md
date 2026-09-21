@@ -25,11 +25,28 @@ A new deployment went out last night. The on-call engineer pings you:
 
 This is a realistic production scenario: a regression that does not break functionality but **degrades observability**. Notifications are still being sent. The system is doing its job -- it is just lying about how well it is doing.
 
+**Load the broken build first.** This regression lives on the `cp-4-broken` branch -- your track's `workshop/<lang>` branch has the correct code, so you must switch to `cp-4-broken` to reproduce it. In your terminal, from your track's exercise directory (`exercises/<lang>`, where `<lang>` is `python`, `quarkus`, or `dotnet`):
+
+```bash
+git stash                                            # park any edits from earlier modules
+git checkout cp-4-broken
+docker compose up --build -d notification-service    # rebuild so the regression is live
+```
+
+Then generate traffic so the anomaly has data to show (run this from `exercises/<lang>`):
+
+```bash
+newman run ../../tests/collections/04-debugging-exercise.json \
+  -e ../../tests/environments/local.json
+```
+
+Wait ~30-60 seconds for Prometheus to scrape the new metrics, then start the investigation below. You will switch back to your track at the end of the module.
+
 ---
 
 ## 4.2 Investigation: dashboard anomaly
 
-Open **Grafana** at `http://localhost:3000`. Navigate to **Dashboards** in the left sidebar and open the **Checkout Saga** dashboard.
+Open {% include open-grafana.html %}. Navigate to **Dashboards** in the left sidebar and open the **Checkout Saga** dashboard, and set the time range (top-right) to **Last 15 minutes**. (The traffic you generated in §4.1 populates these panels; if they look empty, rerun the §4.1 Newman command and wait ~30-60 seconds for the scrape.)
 
 Two panels show tier breakdowns:
 
@@ -44,20 +61,24 @@ The Order-to-Notification path goes through Kafka. So either Order is not puttin
 
 ## 4.3 Investigation: trace inspection
 
-In Grafana, navigate to **Explore** (compass icon in the left sidebar) and select **Tempo** as the data source from the dropdown at the top. Click **Search** and look for recent traces -- you should see checkout traces from your earlier test runs. Click on a trace to open the trace tree.
+First, run a checkout with a **known GOLD-tier customer** so you have one specific trace to inspect. The tier is derived from the customer-id suffix, so `cust_dave_gold` resolves to `GOLD`:
+
+{% include checkout-curl.html cart="cart_module4_trace" customer="cust_dave_gold" %}
+
+Note the `orderId` in the response. Then, in Grafana, navigate to **Explore** (compass icon in the left sidebar) and select **Tempo** as the data source from the dropdown at the top. Click **Search** and find the trace for that `orderId` (or open the newest trace). Click it to open the trace tree.
 
 Walk through the spans and note the `customer.tier` attribute on each one:
 
 | Span | `customer.tier` value |
 |---|---|
-| `Order.Checkout` | `SILVER` |
-| `Order.Acl.InventoryReserve` | `SILVER` (via baggage) |
-| `Inventory.Reserve` | `SILVER` (via baggage) |
-| `Order.Payment.Authorize` | `SILVER` (via baggage) |
-| `Payment.Authorize` | `SILVER` (via baggage) |
-| `Order.Shipping.Schedule` | `SILVER` (via baggage) |
-| `Shipping.Schedule` | `SILVER` (via baggage) |
-| `Order.Events.Publish` | `SILVER` (via baggage) |
+| `Order.Checkout` | `GOLD` |
+| `Order.Acl.InventoryReserve` | `GOLD` (via baggage) |
+| `Inventory.Reserve` | `GOLD` (via baggage) |
+| `Order.Payment.Authorize` | `GOLD` (via baggage) |
+| `Payment.Authorize` | `GOLD` (via baggage) |
+| `Order.Shipping.Schedule` | `GOLD` (via baggage) |
+| `Shipping.Schedule` | `GOLD` (via baggage) |
+| `Order.Events.Publish` | `GOLD` (via baggage) |
 | `Notification.Consume` | `unknown` |
 | `Notification.Send` | `unknown` |
 
@@ -215,11 +236,16 @@ the services run as built container images, use `--build` (a plain
 docker compose up --build -d notification-service
 ```
 
-Run the validation tests:
+> If the tier is still wrong after the rebuild, the Docker layer cache may have reused
+> the old compiled output. Force a clean rebuild with `docker compose build --no-cache
+> notification-service` followed by `docker compose up -d notification-service`, then
+> run a fresh checkout. See [Troubleshooting](/docs/troubleshooting/).
+
+Run the validation tests (from your exercise directory, `exercises/<lang>`):
 
 ```bash
-newman run tests/collections/04-debugging-exercise.json \
-  -e tests/environments/local.json
+newman run ../../tests/collections/04-debugging-exercise.json \
+  -e ../../tests/environments/local.json
 ```
 
 Then verify in Grafana:
@@ -227,6 +253,14 @@ Then verify in Grafana:
 1. **Checkout Saga dashboard** -- the "Notifications sent by tier" panel now shows the same four-tier breakdown as "Checkout success rate by tier"
 2. **Tempo** -- `Notification.Consume` and `Notification.Send` spans now carry the correct `customer.tier` attribute
 3. **Loki** -- Notification service logs show real tier values instead of `unknown`
+
+**Return to your track before Module 5.** You made the fix on the `cp-4-broken` branch; switch back to your track's branch (which already has the correct code) so the rest of the workshop runs against it. From `exercises/<lang>`:
+
+```bash
+git checkout -f workshop/<lang>                       # discard the throwaway fix edit; back to your track
+git stash pop                                          # restore your earlier-module edits (skip if you did not stash)
+docker compose up --build -d notification-service      # rebuild against your track's code
+```
 
 ---
 

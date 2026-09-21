@@ -202,25 +202,67 @@ Notice the pattern across all three languages:
 
 You submitted a checkout request in Module 0. Now let's find the trace it generated.
 
-1. Open **Grafana** at [http://localhost:3000](http://localhost:3000).
+1. Open {% include open-grafana.html %}.
 2. Navigate to **Explore** (compass icon in the sidebar).
 3. Select **Tempo** as the data source.
 4. In the query type dropdown, select **Search**.
-5. Set the **Service Name** filter to `order-service`.
-6. Click **Run query**.
+5. Set the **Service Name** filter to `order-service`, then click **Run query**.
 
 You should see at least one trace from your checkout. Click on it to open the trace detail view.
 
-### What the auto-instrumented trace looks like
+> **`order-service` not in the Service Name dropdown?** Tempo discovers tag values
+> lazily over the selected time range, so the dropdown can lag even when the traces
+> are already stored. Widen the time picker (top-right) to **Last 1 hour** and reopen
+> the dropdown, or simply leave the **Service Name** filter blank and click **Run
+> query** -- your checkout trace is in the results table, tagged `order-service`. You
+> can also switch the query type to **TraceQL** and run
+> `{ resource.service.name = "order-service" }` in Code mode.
 
-Without any domain-aware instrumentation, the trace contains spans generated automatically by the OpenTelemetry framework instrumentation:
+### What generic auto-instrumentation alone would show
+
+Heads up: the services in this workshop **already ship with domain-aware
+instrumentation**, so the trace you just opened is already named in business terms
+(`Order.Checkout`, `Payment.Authorize`, and so on -- you will inspect it closely in
+Module 2). You will not see a purely "generic" trace on these branches. It is still
+worth knowing what generic auto-instrumentation **alone** would produce, because that
+bare framework baseline is where most services start.
+
+With only the framework's automatic instrumentation and no domain spans, the trace
+would contain:
 
 - `HTTP POST /api/orders/checkout` -- the inbound request to the Order service
 - `HTTP POST` -- outbound calls from Order to Inventory, Payment, and Shipping
 - A Kafka producer span for the event publication
 - `HTTP POST /api/inventory/reserve`, `HTTP POST /api/payments/authorize`, `HTTP POST /api/shipments/schedule` -- the inbound requests at each downstream service
 
-The spans are named after HTTP methods and paths. The attributes are HTTP-level: `http.method`, `http.status_code`, `http.url`. If you click on a span, the attributes tell you about the transport, not about the business operation.
+Those spans are named after HTTP methods and paths, with HTTP-level attributes
+(`http.method`, `http.status_code`, `http.url`) that describe the transport, not the
+business operation. The domain-named spans you actually see in your trace are exactly
+the improvement this workshop builds on -- Module 2 shows how they are created.
+
+### A note on the dashboards
+
+If you go browsing **Dashboards** in Grafana at this point, most of them will look
+empty. That is expected -- the workshop's domain metrics do not exist yet. Here is what
+should and should not have data after Module 1:
+
+| Dashboard | Now? | Why |
+|-----------|------|-----|
+| Workshop / Service Health | Yes | Request rate, error rate, and p95 latency are derived from your spans by Tempo's metrics generator, so they fill in from any traffic. (The JVM heap panel is Quarkus-only.) |
+| Workshop / Trace Explorer | Yes | Reads traces and the service graph straight from Tempo. |
+| Workshop / Observability Cost | Yes | Collector self-metrics -- these tick along regardless of traffic. |
+| Workshop / Checkout Saga | **No** | Needs `workshop_checkout_*` and `workshop_notifications_*`, which you add in Modules 2 and 3. |
+| Workshop / Transport Comparison | **No** | Needs `workshop_acl_*`, which you add in Module 5. |
+
+Filling in those last two is the whole point of the modules ahead -- a stock dashboard
+can chart your HTTP traffic, but nothing off the shelf can chart your checkout outcomes
+by customer tier.
+
+Even on the dashboards that should have data, one checkout is not enough: the panels use
+rate windows of one to five minutes, which need at least a couple of data points. If they
+look empty, run five or ten checkouts, set the time picker to **Last 15 minutes**, and
+give it a minute. On the Quarkus and .NET tracks, metrics export every 60 seconds by
+default, so be patient on the first pass.
 
 ---
 
@@ -245,5 +287,6 @@ In Module 2, we will add domain-named spans, attach business attributes, and int
 Before moving on, verify:
 
 - [ ] You can navigate to Grafana > Explore > Tempo and find a trace from your checkout
+- [ ] You know why the Checkout Saga and Transport Comparison dashboards are still empty -- their domain metrics arrive in Modules 2, 3, and 5
 - [ ] You understand the five bounded contexts and their relationships (Order orchestrates; Inventory, Payment, Shipping are called synchronously; Notification consumes events asynchronously)
 - [ ] You can articulate the gap: auto-instrumented traces tell you *that* requests flowed, but not *what* domain operation happened or *why*
