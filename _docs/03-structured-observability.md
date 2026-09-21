@@ -280,13 +280,34 @@ private void RecordOutcome(string outcome, string tier, long startTime)
 > **`workshop_checkout_outcomes_total`** in Prometheus and Grafana. Use the
 > prefixed name in the queries below (the pre-provisioned dashboards already do).
 
+These are **PromQL** queries. To run any of them: in Grafana, go to **Explore** (compass
+icon in the left sidebar), select the **Prometheus** data source from the dropdown at the
+top, switch the query editor from **Builder** to **Code** (pasting raw PromQL into Builder
+mode does not work), set the time range (top-right) to **Last 15 minutes**, paste the
+query, and click **Run query**.
+
 | Metric | Question it answers | Example query |
 |---|---|---|
 | `checkout_outcomes_total` | How many checkouts succeeded vs failed today? | `sum by (outcome) (workshop_checkout_outcomes_total)` |
 | `checkout_outcomes_total{tier="GOLD"}` | Are gold-tier customers experiencing more failures? | `workshop_checkout_outcomes_total{tier="GOLD", outcome=~"cancelled.*"}` |
 | `checkout_duration_seconds` | What is the p95 checkout latency? | `histogram_quantile(0.95, rate(workshop_checkout_duration_seconds_bucket[5m]))` |
 
-Notice the label discipline: `outcome` is a small enum (success, cancelled_inventory, cancelled_payment, cancelled_shipping) and `tier` is bounded (BRONZE, SILVER, GOLD, PLATINUM). This keeps cardinality low -- we will return to this in Module 5.
+> **Some of these are legitimately empty right now -- that is expected, not a mistake.**
+> So far the walkthrough has produced only *successful* checkouts, so the `cancelled_*`
+> series do not exist yet and row 2 --
+> `workshop_checkout_outcomes_total{tier="GOLD", outcome=~"cancelled.*"}` -- returns **No
+> data**. Cancellations are generated in Module 4; this query starts returning rows once a
+> cancelled checkout exists.
+
+Run the first query, `sum by (outcome) (workshop_checkout_outcomes_total)`, now. (If it
+returns **No data**, generate a few checkouts first -- see the checkout command in Step 3b
+below -- and wait ~30-60 seconds for Prometheus to scrape.) You should get one series per
+outcome generated so far, e.g. `{outcome="success"}` with a running count. Each returned
+series is tagged with its label values -- and that is the **label discipline** to notice:
+`outcome` is a small enum (success, cancelled_inventory, cancelled_payment,
+cancelled_shipping) and `tier` is bounded (BRONZE, SILVER, GOLD, PLATINUM). Because both
+label sets are small and fixed, the total number of time series stays low (low
+cardinality) -- we will return to why that matters in Module 5.
 
 ---
 
@@ -326,15 +347,32 @@ _logger.LogInformation("Checkout confirmed: reservation={ReservationId} authoriz
 ```
 
 **Save, then rebuild and restart the service** so the container picks up your
-change (`--build` is required -- a plain `restart` would reuse the old image):
+change (`--build` is required -- a plain `restart` would reuse the old image). Run this
+in your terminal -- a local shell, or the **Codespaces terminal** -- from your track's
+exercise directory:
 
 ```bash
+# From the repo root -- in Codespaces that is
+# /workspaces/domain-driven-design-observability-workshop
+cd exercises/<lang>                        # <lang> is python, quarkus, or dotnet
 docker compose up --build -d order-service
+docker compose ps                          # order-service shows healthy/running
 ```
 
-**Verify:** Run a checkout, then query Loki in Grafana Explore:
+> If your change does not show up, the Docker layer cache may have reused the old
+> compiled output. Force a clean rebuild with `docker compose build --no-cache
+> order-service` followed by `docker compose up -d order-service`, then generate fresh
+> traffic. See [Troubleshooting](/docs/troubleshooting/).
 
-```
+**Verify:** First run a checkout to produce a fresh success log line:
+
+{% include checkout-curl.html cart="cart_module3_log" customer="cust_dave_gold" %}
+
+Then query Loki in Grafana Explore. Go to **Explore**, select the **Loki** data source,
+switch the query editor from **Builder** to **Code**, set the time range to **Last 15
+minutes**, paste the query below, and click **Run query**:
+
+```text
 {service_name="order-service"} |= "Checkout confirmed"
 ```
 
@@ -502,11 +540,11 @@ curl -s -X POST http://localhost:8080/api/orders/checkout \
 
 Note the `orderId` in the response -- you will use it in the next step to find your trace and logs.
 
-Then run the Newman validation suite to generate a wider set of traffic (successful checkouts, inventory failures, different customer tiers):
+Then run the Newman validation suite to generate a wider set of traffic (successful checkouts, inventory failures, different customer tiers). Run it from your exercise directory (`exercises/<lang>`), where the earlier setup steps left you -- the `tests/` directory lives at the repo root, two levels up:
 
 ```bash
-newman run tests/collections/03-domain-events-validation.json \
-  -e tests/environments/local.json
+newman run ../../tests/collections/03-domain-events-validation.json \
+  -e ../../tests/environments/local.json
 ```
 
 ---
@@ -517,9 +555,16 @@ The real power of structured observability is pivoting between the three signals
 
 ### 6a. Check the business metrics dashboard
 
-1. Open **Grafana** at `http://localhost:3000`.
-2. Navigate to **Dashboards** and open the **Checkout Saga** dashboard.
-3. Look for the `checkout_outcomes_total` counter and `checkout_duration_seconds` histogram panels. You should see per-tier and per-outcome breakdowns from the traffic you generated in Step 5.
+The Newman suite in Step 5 generated a spread of traffic. Give Prometheus **~30-60 seconds** to scrape it before the panels fill in, then:
+
+1. Open {% include open-grafana.html %}.
+2. Navigate to **Dashboards** and open the **Checkout Saga** dashboard. Set the time range (top-right) to **Last 15 minutes**.
+3. The business metrics appear under these panel titles -- note the titles do **not** match the raw metric names:
+   - **Checkout success rate by tier** -- built from the `workshop_checkout_outcomes_total` counter, broken down by `outcome` and `tier`.
+   - **Checkout duration (heatmap)** -- built from the `workshop_checkout_duration_seconds` histogram.
+   - **Notifications sent by tier** -- notification volume per customer tier.
+
+   You should see per-tier and per-outcome breakdowns from the Step 5 traffic. If a panel still looks empty, generate a few more checkouts (rerun the Step 5 Newman suite) and wait another ~30-60 seconds for the scrape. The **Orders in payment verification** panel may read **No data** -- it only shows orders *currently* sitting in that state, so it is usually empty; that is expected.
 
 ### 6b. Trace to logs -- follow a single checkout
 
@@ -529,13 +574,13 @@ The real power of structured observability is pivoting between the three signals
 
 ### 6c. Metrics to traces -- follow a spike
 
-7. Back on the **Checkout Saga** dashboard, look for an exemplar dot on one of the metric panels. Exemplars on metrics link to specific traces. When you see a spike in `checkout_outcomes_total{outcome="cancelled_inventory"}`, the exemplar on that data point links to one of the traces that contributed to it. Click the exemplar to jump directly into the trace view.
+7. Exemplars link a metric data point to one of the traces behind it. The Step 5 Newman suite included **inventory failures**, so `workshop_checkout_outcomes_total{outcome="cancelled_inventory"}` has data to show. On the **Checkout success rate by tier** panel (or query that metric directly in **Explore > Prometheus**, Code mode), hover over a data point to reveal its **exemplar** -- a small diamond marker beneath the line -- and click it to jump straight into one of the traces that contributed to that point. If you see no exemplar markers, rerun the Step 5 Newman suite to generate more inventory-failure traffic and wait ~30-60 seconds for the scrape.
 
 ### 6d. Logs to traces -- follow an order ID
 
-8. Navigate to **Explore > Loki**. Run the following query (replace the order ID with the one from your checkout in Step 5):
+8. Navigate to **Explore > Loki**, select the **Loki** data source, and switch the query editor from **Builder** to **Code**. Run the following query (replace the order ID with the one from your checkout in Step 5):
 
-   ```
+   ```text
    {service_namespace="workshop"} | json | order_id="ord_xxx"
    ```
 
