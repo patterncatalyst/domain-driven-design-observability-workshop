@@ -282,7 +282,7 @@ public async Task<CheckoutResult> Checkout(CheckoutCommand command)
 }
 ```
 
-Notice the `BaggageHelpers.put()` / `set_baggage()` / `BaggageHelpers.Set()` call. OTel **baggage** is a mechanism for propagating key-value pairs across service boundaries within a trace. The Order service sets `customer.tier` in baggage, and every downstream service (Inventory, Payment, Shipping) reads it without the tier appearing in any REST API contract. This is how the Payment service's span can include `customer.tier` even though the payment request does not carry it.
+Notice the `BaggageHelpers.put()` (Java/Quarkus) / `set_baggage()` (Python) / `BaggageHelpers.Set()` (C#/.NET) call -- the code tab above shows only your language's form. OTel **baggage** is a mechanism for propagating key-value pairs across service boundaries within a trace. The Order service sets `customer.tier` in baggage, and every downstream service (Inventory, Payment, Shipping) reads it without the tier appearing in any REST API contract. This is how the Payment service's span can include `customer.tier` even though the payment request does not carry it.
 
 ---
 
@@ -320,13 +320,49 @@ activity?.SetTag("payment.risk_score", command.Amount > 100m ? "high" : "normal"
 **Save the file**, then rebuild and restart the service so the container picks
 up your change. Because the services run as built container images (not in a
 live file-watching dev mode), you need `--build` here -- a plain
-`docker compose restart` would reuse the old image:
+`docker compose restart` would reuse the old image. Run this in your terminal --
+a local shell, or the **Codespaces terminal** -- from your track's exercise
+directory:
 
 ```bash
+# From the repo root -- in Codespaces that is
+# /workspaces/domain-driven-design-observability-workshop
+cd exercises/<lang>                          # <lang> is python, quarkus, or dotnet
 docker compose up --build -d payment-service
+docker compose ps                            # payment-service shows healthy/running
 ```
 
-**Verify:** Run a checkout and check the trace in Tempo. Find the `Payment.Authorize` span -- you should see `payment.risk_score = "normal"` (for amounts <= 100) or `payment.risk_score = "high"` (for amounts > 100) in the span attributes.
+**Verify:** Run a **new** checkout (a `curl` to `localhost:8080` works from the terminal
+in both local and Codespaces) -- traces already in Tempo are immutable, so your change
+only shows up on spans created after the rebuild:
+
+{% include checkout-curl.html cart="cart_module2_verify" customer="cust_dave_gold" sku="SKU-MONITOR-27" qty="2" price="299.99" shipping="express" %}
+
+Then find your change in the trace:
+
+1. In Grafana **Explore > Tempo**, click **Search** and open the newest trace (or search by the `orderId` the checkout returned).
+2. In the trace tree, find and click the **`Payment.Authorize`** span.
+3. Scroll down to the span's **attributes** panel and look for **`payment.risk_score`**.
+
+You should see `payment.risk_score = "high"` for this checkout (unit price 299.99 > 100).
+A checkout with a unit price <= 100 would show `"normal"`. For a **before/after**
+comparison, open one of your earlier traces (from Module 0 or 1, generated before this
+rebuild): its `Payment.Authorize` span has **no** `payment.risk_score` attribute at all --
+that is the effect of the line you just added.
+
+> **Attribute still missing?** Docker's layer cache sometimes decides nothing changed
+> and reuses the previously compiled output -- the container is recreated, but it is
+> running the old code. This bites the Quarkus/Maven build most often. Force a clean
+> rebuild:
+>
+> ```bash
+> docker compose build --no-cache payment-service
+> docker compose up -d payment-service
+> ```
+>
+> These are two separate commands: `--no-cache` belongs to `docker compose build`, and
+> passing it to `docker compose up` fails with `unknown flag: --no-cache`. See
+> [Troubleshooting](/docs/troubleshooting/) for the full checklist.
 
 ---
 
@@ -548,6 +584,12 @@ The prefixes serve two purposes. First, they make identifiers **grep-friendly** 
 
 When these identifiers appear as span attributes (`span.setAttribute("authorization.id", auth.id().value())`), they carry their prefix into the trace. This means you can search Tempo for `{ span.authorization.id =~ "auth_.*" }` and know you are looking at payment spans.
 
+**Try it:** run that prefix search yourself.
+
+{% include explore-query.html datasource="Tempo" query='{ span.authorization.id =~ "auth_.*" }' %}
+
+For **Tempo**, choose the **TraceQL** query type (instead of **Search**) before switching to **Code** and pasting the query. You should get back the payment spans from your earlier checkouts. Try `{ span.order.id =~ "ord_.*" }` too -- same idea, scoped to spans that carry an order id.
+
 ---
 
 **Step 5: Run a checkout and observe the trace**
@@ -574,17 +616,24 @@ curl -s -X POST http://localhost:8080/api/orders/checkout \
   }' | python3 -m json.tool
 ```
 
-Or use the Newman collection:
+Or use the Newman collection (run from your exercise directory, `exercises/<lang>`):
 
 ```bash
-newman run tests/collections/01-checkout-happy-path.json -e tests/environments/local.json
+newman run ../../tests/collections/01-checkout-happy-path.json -e ../../tests/environments/local.json
 ```
 
-Open **Grafana > Explore > Tempo** and find the new trace. Compare it to the trace from Module 1:
+Open **Grafana > Explore > Tempo** and find the new trace.
 
-{% include excalidraw.html file="trace-comparison" alt="Trace comparison: generic vs domain-named" caption="Top: generic auto-instrumented spans. Bottom: domain-named spans with business attributes." %}
+Because these services already ship with domain-aware instrumentation, your trace is
+already domain-named -- and so was the trace you opened back in Module 1. You will not
+see a live "generic" trace to compare against on these branches. The **Before** block
+below is therefore illustrative: it shows what the same checkout would look like with
+generic auto-instrumentation **only** (no domain spans). The **After** block is what
+you actually see now:
 
-**Before (generic auto-instrumentation):**
+{% include excalidraw.html file="trace-comparison" alt="Trace comparison: generic vs domain-named" caption="Top: generic auto-instrumented spans (illustrative). Bottom: domain-named spans with business attributes -- what you see now." %}
+
+**Before (generic auto-instrumentation -- illustrative):**
 ```
 HTTP POST /api/orders/checkout
   ├── HTTP POST (to inventory)

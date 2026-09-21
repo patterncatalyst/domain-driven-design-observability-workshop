@@ -104,6 +104,8 @@ The `post-start.sh` script brings up the full Docker Compose stack -- all five s
 
 > **Machine and quota.** Codespaces provisions a **4-core / 16 GB** machine for this devcontainer -- comfortable for the full stack. The GitHub free tier includes **120 core-hours/month** (~30 hours on a 4-core box), which is plenty for the workshop. First boot takes ~5-10 minutes; subsequent starts are much faster.
 
+> **Opening Grafana and the services in Codespaces.** Use the **Ports** tab (next to the terminal) and click the **globe / Open in Browser** icon on a port -- for example port **3000** for Grafana. Do not hand-type a `localhost:3000` URL: in Codespaces that only works inside the terminal (e.g. `curl`), not in your browser, where each port is served from a forwarded `*.app.github.dev` address. If a forwarded port opens to a **404 or blank page** in your browser, see [Troubleshooting: Forwarded port shows 404 or a blank page](/docs/troubleshooting/) -- it is usually browser tracking-protection or a corporate proxy, not the Codespace, and `gh codespace ports forward` is a reliable workaround.
+
 ---
 
 ## 4. Setup: Local Docker Compose (Alternative)
@@ -130,14 +132,21 @@ All five services and the infrastructure containers (kafka, otel-collector, temp
 
 ## 5. Verify Your Environment
 
-Run the smoke test to confirm everything is wired up:
+Run the smoke test to confirm everything is wired up. Run it in your terminal --
+a local shell, or the **Codespaces terminal** (the checks hit `localhost`, which
+works from the terminal in both environments) -- from your track's exercise
+directory:
 
 ```bash
+# From the repo root -- in Codespaces that is
+# /workspaces/domain-driven-design-observability-workshop
+cd exercises/<lang>            # <lang> is python, quarkus, or dotnet
+
 # If the verify script is available:
-./tests/verify.sh
+../../tests/verify.sh
 
 # Or use Newman (Postman CLI) with the provided collection:
-newman run tests/collections/00-smoke-test.json -e tests/environments/local.json
+newman run ../../tests/collections/00-smoke-test.json -e ../../tests/environments/local.json
 ```
 
 You should see all checks pass. If any fail, check the [Troubleshooting](/docs/troubleshooting/) page.
@@ -146,14 +155,14 @@ You should see all checks pass. If any fail, check the [Troubleshooting](/docs/t
 
 ## 6. Grafana Orientation
 
-Open Grafana at [http://localhost:3000](http://localhost:3000) (no login required -- anonymous access is enabled).
+Open {% include open-grafana.html %} (no login required -- anonymous access is enabled).
 
-Take a quick tour:
+Take a quick tour. In **Explore**, when you paste one of the example queries below, switch the query editor from **Builder** to **Code** first, then click **Run query** -- pasting raw query text into Builder mode does not work as expected.
 
 - **Dashboards.** The workshop ships with five pre-provisioned dashboards. You will explore these in later modules, but glance at the list now so you know what is available.
 - **Explore > Tempo.** This is where you will query distributed traces. Select the "Tempo" data source and run a simple query -- even if no traces exist yet, confirm the data source is connected.
-- **Explore > Loki.** Structured logs flow here via the OpenTelemetry Collector. Select "Loki" and run `{service_name="order-service"}` to confirm log ingestion is working.
-- **Explore > Prometheus.** Metrics are scraped by Prometheus from the OTel Collector's Prometheus exporter. Select "Prometheus" and try `up` to see which targets are being scraped.
+- **Explore > Loki.** Structured logs flow here via the OpenTelemetry Collector. Select "Loki", switch to **Code**, and run `{service_name="order-service"}` to confirm log ingestion is working.
+- **Explore > Prometheus.** Metrics are scraped by Prometheus from the OTel Collector's Prometheus exporter. Select "Prometheus", switch to **Code**, and try `up` to see which targets are being scraped.
 
 You do not need to understand these tools deeply yet -- we will use them progressively through the workshop.
 
@@ -195,7 +204,7 @@ This single request triggered a saga across all five bounded contexts. In the ne
 
 Before moving on, verify:
 
-- [ ] `docker compose ps` (or Codespaces terminal) shows all services healthy
-- [ ] Grafana is accessible at [http://localhost:3000](http://localhost:3000)
+- [ ] `docker compose ps` (run from `exercises/<lang>`, in a local shell or the Codespaces terminal) shows all services healthy
+- [ ] Grafana opens -- locally at [http://localhost:3000](http://localhost:3000), or in Codespaces via the **Ports** panel (globe icon on port **3000**)
 - [ ] The Tempo, Loki, and Prometheus data sources are connected in Grafana > Explore
 - [ ] Your first checkout request returned `201` with a `CONFIRMED` status

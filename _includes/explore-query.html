@@ -1,0 +1,20 @@
+{%- comment -%}
+Reusable "run a query in Grafana Explore" step (BL-009 / BL-011 / BL-016) so
+every place that asks the reader to run a PromQL / LogQL / TraceQL query spells
+out the same click-path instead of assuming they know it.
+
+Parameters:
+  datasource  Prometheus | Loki | Tempo   (required)
+  query       the query to paste           (optional -- if given, rendered as a
+              copyable code block below the steps; wrap the call in SINGLE quotes
+              when the query contains double quotes)
+  time        time range to set            (default "Last 15 minutes")
+
+Usage (tag on its own line, blank line before and after):
+  {% include explore-query.html datasource="Prometheus" query='sum by (outcome) (workshop_checkout_outcomes_total)' %}
+{%- endcomment -%}In Grafana, go to **Explore** (compass icon in the left sidebar), select the **{{ include.datasource }}** data source from the dropdown at the top, and switch the query editor from **Builder** to **Code**. Set the time range (top-right) to **{{ include.time | default: "Last 15 minutes" }}**{% if include.query %}, paste the query below, and click **Run query**:
+
+```text
+{{ include.query }}
+```
+{% else %}, enter your query, and click **Run query**.{% endif %}
