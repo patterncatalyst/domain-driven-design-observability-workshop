@@ -1,0 +1,37 @@
+{%- comment -%}
+Reusable inline checkout command (BL-015) so every "run a checkout" step is
+self-contained -- the reader never has to page back to Module 0 for the curl.
+
+Parameters (all optional, with sensible defaults):
+  cart      cartId         (default cart_demo_001)
+  customer  customerId     (default cust_alice_silver -> SILVER tier)
+  sku       line item sku  (default SKU-LAPTOP-PRO)
+  qty       quantity       (default 1)
+  price     unitPrice      (default 49.99)
+  payment   paymentMethod  (default credit_card)
+  shipping  shippingClass  (default standard)
+
+Usage (put the tag on its own line, blank line before and after):
+  {% include checkout-curl.html customer="cust_dave_gold" price="299.99" %}
+
+Runs from anywhere -- localhost:8080 is reachable from the terminal in both
+local Docker Compose and GitHub Codespaces (only the browser needs a forwarded
+port; see open-grafana.html).
+{%- endcomment -%}
+```bash
+curl -s -X POST http://localhost:8080/api/orders/checkout \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cartId": "{{ include.cart | default: "cart_demo_001" }}",
+    "customerId": "{{ include.customer | default: "cust_alice_silver" }}",
+    "lineItems": [
+      {
+        "sku": "{{ include.sku | default: "SKU-LAPTOP-PRO" }}",
+        "quantity": {{ include.qty | default: 1 }},
+        "unitPrice": {{ include.price | default: 49.99 }}
+      }
+    ],
+    "paymentMethod": "{{ include.payment | default: "credit_card" }}",
+    "shippingClass": "{{ include.shipping | default: "standard" }}"
+  }' | python3 -m json.tool
+```

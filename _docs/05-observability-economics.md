@@ -159,16 +159,16 @@ Our workshop metrics keep cardinality bounded by design:
 
 ## Step 5: Run traffic and observe the cost dashboard
 
-**Try it:** Generate some traffic to see the cost difference:
+**Try it:** Generate some traffic to see the cost difference. Run this from your exercise directory (`exercises/<lang>`) -- the `tests/` directory is at the repo root, two levels up:
 
 ```bash
-newman run tests/collections/01-checkout-happy-path.json \
-  -e tests/environments/local.json
+newman run ../../tests/collections/01-checkout-happy-path.json \
+  -e ../../tests/environments/local.json
 ```
 
 Run it several times to build up enough data.
 
-Open the **Observability Cost** dashboard in Grafana (`http://localhost:3000` > **Dashboards** > **Observability Cost**).
+Open {% include open-grafana.html %}, then navigate to **Dashboards** > **Observability Cost**.
 
 Look at three panels:
 
