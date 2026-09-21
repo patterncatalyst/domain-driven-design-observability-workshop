@@ -61,7 +61,7 @@ newman run ../../tests/collections/01-checkout-happy-path.json \
   -e ../../tests/environments/local.json
 ```
 
-Open Grafana at `http://localhost:3000` to explore dashboards, traces, and logs.
+Open {% include open-grafana.html %} to explore dashboards, traces, and logs.
 
 ---
 

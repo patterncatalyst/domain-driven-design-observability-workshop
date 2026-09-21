@@ -63,6 +63,56 @@ If services are running but not reachable from your browser, check that port for
 
 ---
 
+## Forwarded port shows 404 or a blank page in your browser (Codespaces)
+
+**Symptom**: You open a forwarded port -- most often Grafana on 3000 -- and the browser shows a
+**404 Not Found** page or a blank page, even though the Ports tab lists the port as forwarded
+and the container is healthy.
+
+**This is almost never the Codespace.** The service is running; the problem is how your browser
+reaches the Codespaces port-forwarding domain. Work through these in order.
+
+1. **Confirm the service itself is up** from the Codespaces terminal (this bypasses the browser
+   entirely):
+
+   ```bash
+   curl -sI http://localhost:3000/    # Grafana; expect HTTP/1.1 200 OK
+   ```
+
+   If you get `200`, the service is fine and the issue is browser/tunnel-side -- continue below.
+
+2. **Try a different browser** (Chrome or Edge). If the URL loads there but not in your original
+   browser, the original browser is blocking the forwarding tunnel. The tunnel authenticates with
+   a `SameSite=None; Partitioned` cookie, which **Firefox's Enhanced/Total Cookie Protection**
+   (and some privacy extensions) will block, producing a 404. In Firefox, click the **shield
+   icon** in the address bar and turn **Enhanced Tracking Protection off** for `*.app.github.dev`,
+   allow its cookies, then reload.
+
+3. **Check for a corporate proxy.** Corporate networks often allow the editor domain
+   (`github.dev`) but block the separate forwarded-ports domain (`app.github.dev`), or route only
+   the browser through a proxy that `curl` does not use. Check your browser's own proxy/PAC
+   settings. A Codespace **restart rotates the tunnel**, so a port that worked earlier can start
+   failing after a restart even though nothing on the server changed.
+
+4. **Most reliable workaround -- forward the port to your local machine** with the GitHub CLI and
+   open it over `localhost` (exempt from corporate proxies and third-party-cookie rules). Run
+   this on your **local** machine, not in the Codespace terminal:
+
+   ```bash
+   # list your codespaces to get the name
+   gh codespace list
+   # forward Grafana (repeat/add more for 9090 Prometheus, 3200 Tempo, etc.)
+   gh codespace ports forward 3000:3000 -c <codespace-name>
+   ```
+
+   Then open <http://localhost:3000> in any browser.
+
+5. **Do not use the VS Code "Simple Browser" for Grafana.** Grafana sends `X-Frame-Options: deny`,
+   so it will not render inside the Simple Browser's embedded frame (you get a blank page). Use a
+   real browser tab or the `gh codespace ports forward` route above.
+
+---
+
 ## Grafana shows no data
 
 **Symptom**: Dashboards are empty, Explore shows no traces or logs.
@@ -84,6 +134,29 @@ If services are running but not reachable from your browser, check that port for
      -e ../../tests/environments/local.json
    ```
 5. In Grafana, verify datasources are configured: **Settings** (gear icon) then **Data Sources**. You should see Tempo, Prometheus, and Loki.
+
+---
+
+## Code change does not show up after a rebuild
+
+**Symptom**: You edited a source file, ran `docker compose up --build -d <service>`, and the new span attribute, log line, or metric still does not appear.
+
+**Fix**: Work through these in order.
+
+1. **Are you looking at a new trace?** Spans already in Tempo are immutable -- your change only affects traces created *after* the rebuild. Run a fresh checkout and open that trace, not the one you were already looking at.
+
+2. **Did the build actually recompile?** Docker's layer cache can decide nothing changed and reuse the previous compiled output -- most commonly with the Quarkus/Maven build layer. The container gets recreated, so it *looks* like the rebuild worked, but it is running the old bytecode. Force a clean build:
+
+   ```bash
+   docker compose build --no-cache <service>
+   docker compose up -d <service>
+   ```
+
+   Note these are two separate commands. `--no-cache` is a `docker compose build` flag; passing it to `docker compose up` fails with `unknown flag: --no-cache`.
+
+3. **Did you edit the file for your language?** Each language track has its own tree (`exercises/quarkus/`, `exercises/python/`, `exercises/dotnet/`). Editing the Python file while running the Quarkus stack changes nothing.
+
+4. **Give metrics time.** New *metrics* (unlike spans) need an export cycle plus a scrape before they appear -- up to ~60 seconds on the Quarkus and .NET tracks. Spans show up within seconds.
 
 ---
 
