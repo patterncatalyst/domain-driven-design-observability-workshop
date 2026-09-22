@@ -172,7 +172,7 @@ Open {% include open-grafana.html %}, then navigate to **Dashboards** > **Observ
 
 Look at three panels:
 
-1. **Span volume through Collector** -- `otelcol_receiver_accepted_spans_total` rate, plus any dropped spans
+1. **Span volume through Collector** -- `otelcol_receiver_accepted_spans` rate, plus any refused spans
 2. **Collector memory** -- shows the tail sampling buffer's memory impact
 3. **Export rate by signal** -- compare the export rate now (with tail sampling) vs before
 
