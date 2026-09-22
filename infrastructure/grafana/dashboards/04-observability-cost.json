@@ -31,7 +31,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum(rate(otelcol_receiver_accepted_spans_total[1m]))",
+          "expr": "sum(rate(otelcol_receiver_accepted_spans[1m]))",
           "legendFormat": "accepted",
           "range": true,
           "refId": "A"
@@ -39,8 +39,8 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum(rate(otelcol_processor_dropped_spans_total[1m]))",
-          "legendFormat": "dropped (sampling)",
+          "expr": "sum(rate(otelcol_receiver_refused_spans[1m]))",
+          "legendFormat": "refused",
           "range": true,
           "refId": "B"
         }
@@ -117,7 +117,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum by (exporter) (rate(otelcol_exporter_sent_spans_total[1m]))",
+          "expr": "sum by (exporter) (rate(otelcol_exporter_sent_spans[1m]))",
           "legendFormat": "spans -> {{exporter}}",
           "range": true,
           "refId": "A"
@@ -125,7 +125,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum by (exporter) (rate(otelcol_exporter_sent_metric_points_total[1m]))",
+          "expr": "sum by (exporter) (rate(otelcol_exporter_sent_metric_points[1m]))",
           "legendFormat": "metrics -> {{exporter}}",
           "range": true,
           "refId": "B"
@@ -133,7 +133,7 @@
         {
           "datasource": { "type": "prometheus", "uid": "prometheus" },
           "editorMode": "code",
-          "expr": "sum by (exporter) (rate(otelcol_exporter_sent_log_records_total[1m]))",
+          "expr": "sum by (exporter) (rate(otelcol_exporter_sent_log_records[1m]))",
           "legendFormat": "logs -> {{exporter}}",
           "range": true,
           "refId": "C"
