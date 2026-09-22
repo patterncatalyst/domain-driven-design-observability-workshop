@@ -175,51 +175,41 @@ The correct version reads `customer.tier` from OTel baggage, which was propagate
 
 {% include codetabs.html langs="Quarkus|Python|C#" %}
 
+> **Replace only the one hardcoded line.** The snippets below show *just* the line that
+> changes. Leave every surrounding line — the `event`/`orderEvent` assignment, the
+> span/activity attribute calls, and the `send(...)` call — exactly as it is. Do **not**
+> paste over that whole block: the assignment line lives in the middle of it (in Python and
+> C#), and deleting it breaks the consumer.
+
 ```java
 // notification-service/.../infrastructure/kafka/OrderEventConsumer.java
 
-// CORRECT version:
+// CORRECT version -- replace ONLY the broken line:
+//   String customerTier = "unknown";
 // The Quarkus OTel Kafka interceptor extracts the W3C 'baggage' header
 // from the record and makes it the current context's baggage automatically.
 String customerTier = BaggageHelpers.get("customer.tier");
 if (customerTier == null) customerTier = "unknown";
-
-Span span = Span.current();
-span.setAttribute("event.type", event.getClass().getSimpleName());
-span.setAttribute("order.id", event.orderId());
-span.setAttribute("customer.tier", customerTier);
-
-useCase.send(event, customerTier);
 ```
 
 ```python
 # notification_service/infrastructure/kafka_consumer.py
 
-# CORRECT version:
+# CORRECT version -- replace ONLY the broken line:
+#   customer_tier = "unknown"
 # extract() call above restored OTel context from Kafka headers,
 # making baggage available in the current context.
 customer_tier = get_baggage("customer.tier") or "unknown"
-
-span.set_attribute("event.type", type(event).__name__)
-span.set_attribute("order.id", event.order_id)
-span.set_attribute("customer.tier", customer_tier)
-
-self._use_case.send(event, customer_tier)
 ```
 
 ```csharp
 // NotificationService/Infrastructure/KafkaConsumer.cs
 
-// CORRECT version:
+// CORRECT version -- replace ONLY the broken line:
+//   var customerTier = "unknown";
 // Propagators.DefaultTextMapPropagator.Extract() above restored OTel context
 // from Kafka headers, making baggage available via Baggage.Current.
 var customerTier = BaggageHelpers.Get("customer.tier") ?? "unknown";
-
-activity?.SetTag("event.type", orderEvent.EventType);
-activity?.SetTag("order.id", orderEvent.OrderId);
-activity?.SetTag("customer.tier", customerTier);
-
-_useCase.Send(orderEvent, customerTier);
 ```
 
 The key insight: at **async boundaries** like Kafka, OTel context does not propagate automatically the way it does over HTTP. The producer must explicitly inject the `traceparent` and `baggage` headers into the Kafka message, and the consumer must explicitly extract them. In our workshop code, the producer side (`OrderEventKafkaPublisher`) does this correctly. The broken branch simply failed to read the extracted baggage on the consumer side.
