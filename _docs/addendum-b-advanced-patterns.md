@@ -396,6 +396,8 @@ A practical framework for reducing observability costs without losing debugging 
 
 ## 7. Further Reading
 
+> **About these books.** These are books we recommend, not books we wrote. We cite them as pointers into the originals; we do not copy from them, and this material is not a substitute for reading them. If a title is useful to you, please go read it in full.
+
 ### Books referenced in this addendum
 
 - Alessandro Colla -- *Domain-Driven Refactoring* (Independently published, 2024). Saga compensation patterns, choreography vs orchestration, and practical refactoring techniques.
