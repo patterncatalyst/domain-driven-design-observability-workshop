@@ -67,6 +67,8 @@ Open {% include open-grafana.html %} to explore dashboards, traces, and logs.
 
 ## References
 
+> **About these books.** These are books we recommend, not books we wrote. We cite them as pointers into the originals; we do not copy from them, and this material is not a substitute for reading them. If a title is useful to you, please go read it in full.
+
 ### Books
 
 - Vlad Khononov -- *Learning Domain-Driven Design* (O'Reilly, 2021)
